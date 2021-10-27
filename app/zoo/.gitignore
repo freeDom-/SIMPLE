@@ -5,3 +5,4 @@
 !pretrained/*/*
 !tmp
 !tafl
+!tafl/*
