@@ -1,0 +1,7 @@
+docker-compose exec app python3 train.py -e tafl -ne 20 -r -tpa 2048 -ef 20480 -ob 1024 -os 0.00003
+
+TAFL 7x7, Model using 3 resnets, 64 filter:
+docker-compose exec app python3 train.py -e tafl -t 0.1 -os 1e-5 -a 1e-3 -c 0.1 -r
+
+TAFL 7x7, Model using 12 resnets, 128 filter:
+docker-compose exec app python3 train.py -e tafl -t 0.1 -os 1e-5 -a 1e-3
