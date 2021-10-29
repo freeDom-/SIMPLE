@@ -17,7 +17,7 @@ ACTIONS = ROWS * COLS * ACTIONS_PER_TOKEN
 FEATURE_LAYERS = 32
 ACTION_LAYERS = ACTIONS_PER_TOKEN
 KERNEL_SIZE = 3
-FILTERS = 256
+FILTERS = 128
 
 
 class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistribution):
@@ -116,14 +116,8 @@ def resnet_extractor(y, **kwargs):
     a = residual(a, part_filters, (COLS, KERNEL_SIZE))
     a = residual(a, part_filters, (COLS, KERNEL_SIZE))
     a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
 
     b = convolutional(y, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
     b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
     b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
     b = residual(b, part_filters, (KERNEL_SIZE, ROWS))

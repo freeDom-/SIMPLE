@@ -67,9 +67,9 @@ def main(args):
   env.seed(workerseed)
 
   # Check for NaNs and Infs
-  #env = make_vec_env(lambda: env)
-  #env = VecCheckNan(env, raise_exception=True)
-  #env = VecNormalize(env) # when training norm_reward = True
+  env = make_vec_env(lambda: env)
+  env = VecCheckNan(env, raise_exception=True)
+  env = VecNormalize(env) # when training norm_reward = True
 
   
   CustomPolicy = get_network_arch(args.env_name)
