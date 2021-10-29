@@ -18,8 +18,9 @@ from mpi4py import MPI
 from stable_baselines.ppo1 import PPO1
 from stable_baselines.common.callbacks import EvalCallback
 
-from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan
 from stable_baselines.common import set_global_seeds
+from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan
+from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines import logger
 
 from utils.callbacks import SelfPlayCallback
@@ -66,8 +67,9 @@ def main(args):
   env.seed(workerseed)
 
   # Check for NaNs and Infs
-  #env = DummyVecEnv([lambda: env])
+  #env = make_vec_env(lambda: env)
   #env = VecCheckNan(env, raise_exception=True)
+  #env = VecNormalize(env) # when training norm_reward = True
 
   
   CustomPolicy = get_network_arch(args.env_name)
