@@ -19,7 +19,7 @@ from stable_baselines.ppo1 import PPO1
 from stable_baselines.common.callbacks import EvalCallback
 
 from stable_baselines.common import set_global_seeds
-from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan
+from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan, VecNormalize
 from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines import logger
 
@@ -69,7 +69,7 @@ def main(args):
   # Check for NaNs and Infs
   env = make_vec_env(lambda: env)
   env = VecCheckNan(env, raise_exception=True)
-  env = VecNormalize(env) # when training norm_reward = True
+  #env = VecNormalize(env) # when training norm_reward = True
 
   
   CustomPolicy = get_network_arch(args.env_name)
