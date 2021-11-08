@@ -10,7 +10,7 @@ import numpy as np
 from mpi4py import MPI
 
 from shutil import rmtree
-from stable_baselines.ppo1 import PPO1
+from stable_baselines.ppo2 import PPO2
 from stable_baselines.common.policies import MlpPolicy
 
 from utils.register import get_network_arch
@@ -49,7 +49,7 @@ def load_model(env, name):
         cont = True
         while cont:
             try:
-                ppo_model = PPO1.load(filename, env=env)
+                ppo_model = PPO2.load(filename, env=env)
                 cont = False
             except Exception as e:
                 time.sleep(5)
@@ -62,12 +62,12 @@ def load_model(env, name):
                 
                 rank = MPI.COMM_WORLD.Get_rank()
                 if rank == 0:
-                    ppo_model = PPO1(get_network_arch(env.name), env=env)
+                    ppo_model = PPO2(get_network_arch(env.name), env=env)
                     logger.info(f'Saving base.zip PPO model...')
                     ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
                 else:
 
-                    ppo_model = PPO1.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
+                    ppo_model = PPO2.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
 
                 cont = False
             except IOError as e:

@@ -15,7 +15,7 @@ import time
 from shutil import copyfile
 from mpi4py import MPI
 
-from stable_baselines.ppo1 import PPO1
+from stable_baselines.ppo2 import PPO2
 from stable_baselines.common.callbacks import EvalCallback
 
 from stable_baselines.common import set_global_seeds
@@ -65,42 +65,45 @@ def main(args):
   base_env = get_environment(args.env_name)
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
+  train_env = make_vec_env(lambda :env, n_envs=args.n_envs)
+  eval_env = make_vec_env(lambda :env, n_envs=1)
 
   # Check for NaNs and Infs
-  env = make_vec_env(lambda: env)
-  env = VecCheckNan(env, raise_exception=True)
+  #env = make_vec_env(lambda: env)
+  #env = VecCheckNan(env, raise_exception=True)
   #env = VecNormalize(env) # when training norm_reward = True
-
   
   CustomPolicy = get_network_arch(args.env_name)
 
   params = {'gamma':args.gamma
-    , 'timesteps_per_actorbatch':args.timesteps_per_actorbatch
-    , 'clip_param':args.clip_param
-      , 'entcoeff':args.entcoeff
-      , 'optim_epochs':args.optim_epochs
-      , 'optim_stepsize':args.optim_stepsize
-      , 'optim_batchsize':args.optim_batchsize
-      , 'lam':args.lam
-      , 'adam_epsilon':args.adam_epsilon
-      , 'schedule':'linear'
-      , 'verbose':1
-      , 'tensorboard_log':config.LOGDIR
+    , 'n_steps':args.n_steps
+    , 'cliprange':args.cliprange
+    , 'cliprange_vf':args.cliprange_vf
+    , 'ent_coef':args.ent_coef
+    , 'vf_coef':args.vf_coef
+    , 'noptepochs':args.noptepochs
+    , 'learning_rate':args.learning_rate
+    , 'nminibatches':args.nminibatches
+    , 'lam':args.lam
+    , 'max_grad_norm':args.max_grad_norm
+    , 'schedule':'linear'
+    , 'verbose':1
+    , 'tensorboard_log':config.LOGDIR
   }
 
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
 
   if args.reset or not os.path.exists(os.path.join(model_dir, 'best_model.zip')):
     logger.info('\nLoading the base PPO agent to train...')
-    model = PPO1.load(os.path.join(model_dir, 'base.zip'), env, **params)
+    model = PPO2.load(os.path.join(model_dir, 'base.zip'), train_env, **params)
   else:
     logger.info('\nLoading the best_model.zip PPO agent to continue training...')
-    model = PPO1.load(os.path.join(model_dir, 'best_model.zip'), env, **params)
+    model = PPO2.load(os.path.join(model_dir, 'best_model.zip'), train_env, **params)
 
   #Callbacks
   logger.info('\nSetting up the selfplay evaluation environment opponents...')
   callback_args = {
-    'eval_env': selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose),
+    'eval_env': eval_env,
     'best_model_save_path' : config.TMPMODELDIR,
     'log_path' : config.LOGDIR,
     'eval_freq' : args.eval_freq,
@@ -130,8 +133,8 @@ def main(args):
 
   model.learn(total_timesteps=int(1e9), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
 
-  env.close()
-  del env
+  train_env.close()
+  del train_env
 
 
 def cli() -> None:
@@ -161,32 +164,38 @@ def cli() -> None:
   parser.add_argument("--seed", "-s",  type = int, default = 17
             , help="Random seed")
 
+  parser.add_argument("--n_envs", "-n", type=int, default=4
+            , help="How many environments should be used?")
   parser.add_argument("--eval_freq", "-ef",  type = int, default = 10240
             , help="How many timesteps should each actor contribute before the agent is evaluated?")
   parser.add_argument("--n_eval_episodes", "-ne",  type = int, default = 100
             , help="How many episodes should each actor contribute to the evaluation of the agent?")
   parser.add_argument("--threshold", "-t",  type = float, default = 0.2
             , help="What score must the agent achieve during evaluation to 'beat' the previous version?")
+
   parser.add_argument("--gamma", "-g",  type = float, default = 0.99
             , help="The value of gamma in PPO")
-  parser.add_argument("--timesteps_per_actorbatch", "-tpa",  type = int, default = 1024
+  parser.add_argument("--n_steps", "-ns",  type = int, default = 128
             , help="How many timesteps should each actor contribute to the batch?")
-  parser.add_argument("--clip_param", "-c",  type = float, default = 0.2
+  parser.add_argument("--cliprange", "-c",  type = float, default = 0.2
             , help="The clip paramater in PPO")
-  parser.add_argument("--entcoeff", "-ent",  type = float, default = 0.01
+  parser.add_argument("--cliprange_vf", "-cvf",  type = float, default = None
+            , help="The value function clip paramater in PPO")
+  parser.add_argument("--ent_coef", "-ent",  type = float, default = 0.01
             , help="The entropy coefficient in PPO")
-
-  parser.add_argument("--optim_epochs", "-oe",  type = int, default = 4
-            , help="The number of epoch to train the PPO agent per batch")
-  parser.add_argument("--optim_stepsize", "-os",  type = float, default = 0.0003
-            , help="The step size for the PPO optimiser")
-  parser.add_argument("--optim_batchsize", "-ob",  type = int, default = 1024
-            , help="The minibatch size in the PPO optimiser")
-            
+  parser.add_argument("--vf_coef", "-vf",  type = float, default = 0.5
+            , help="The value function coefficient in PPO")
   parser.add_argument("--lam", "-l",  type = float, default = 0.95
             , help="The value of lambda in PPO")
-  parser.add_argument("--adam_epsilon", "-a",  type = float, default = 1e-05
-            , help="The value of epsilon in the Adam optimiser")
+  parser.add_argument("--max_grad_norm", "-gn",  type = float, default = 0.5
+            , help="The maximum value for gradient clipping in PPO")
+
+  parser.add_argument("--noptepochs", "-oe",  type = int, default = 4
+            , help="The number of epoch to train the PPO agent per batch")
+  parser.add_argument("--learning_rate", "-lr",  type = float, default = 0.00025
+            , help="The step size for the PPO optimiser")
+  parser.add_argument("--nminibatches", "-nm",  type = int, default = 4
+            , help="The minibatch size in the PPO optimiser")
 
   # Extract args
   args = parser.parse_args()

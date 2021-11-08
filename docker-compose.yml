@@ -14,14 +14,3 @@ services:
         container_name: selfplay
         cap_add:
             - SYS_PTRACE
-        image: nvidia/cuda:10.2-base
-        command: nvidia-smi
-        deploy:
-            resources:
-                reservations:
-                    devices:
-                      - driver: nvidia
-                        count: 1
-                        capabilities: [gpu]
-        
-
