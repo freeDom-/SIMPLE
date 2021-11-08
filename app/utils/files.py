@@ -12,6 +12,7 @@ from mpi4py import MPI
 from shutil import rmtree
 from stable_baselines.ppo2 import PPO2
 from stable_baselines.common.policies import MlpPolicy
+from stable_baselines.common.cmd_util import make_vec_env
 
 from utils.register import get_network_arch
 
@@ -49,6 +50,7 @@ def load_model(env, name):
         cont = True
         while cont:
             try:
+                env = make_vec_env(lambda :env, n_envs=1)
                 ppo_model = PPO2.load(filename, env=env)
                 cont = False
             except Exception as e:
