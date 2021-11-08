@@ -164,13 +164,13 @@ def cli() -> None:
   parser.add_argument("--seed", "-s",  type = int, default = 17
             , help="Random seed")
 
-  parser.add_argument("--n_envs", "-n", type=int, default=4
+  parser.add_argument("--n_envs", "-n", type=int, default=1
             , help="How many environments should be used?")
   parser.add_argument("--eval_freq", "-ef",  type = int, default = 10240
             , help="How many timesteps should each actor contribute before the agent is evaluated?")
   parser.add_argument("--n_eval_episodes", "-ne",  type = int, default = 100
             , help="How many episodes should each actor contribute to the evaluation of the agent?")
-  parser.add_argument("--threshold", "-t",  type = float, default = 0.2
+  parser.add_argument("--threshold", "-t",  type = float, default = 0.1
             , help="What score must the agent achieve during evaluation to 'beat' the previous version?")
 
   parser.add_argument("--gamma", "-g",  type = float, default = 0.99

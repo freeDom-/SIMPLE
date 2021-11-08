@@ -38,8 +38,11 @@ class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistributio
     def sample(self):
         # Gumbel-max trick to sample
         # a categorical distribution (see http://amid.fish/humble-gumbel)
-        uniform = tf.random_uniform(tf.shape(self.masked_logits), dtype=self.logits.dtype)
-        return tf.argmax(self.masked_logits - tf.log(-tf.log(uniform)), axis=-1)
+        uniform = tf.random_uniform(tf.shape(self.masked_logits), dtype=self.masked_logits.dtype)
+        sample = tf.argmax(self.masked_logits - tf.log(-tf.log(uniform)), axis=-1)
+        print(sample)
+        tf.Print(sample, [sample])
+        return sample
 
 
 class CustomPolicy(ActorCriticPolicy):
@@ -56,17 +59,18 @@ class CustomPolicy(ActorCriticPolicy):
             
             # Policy masking
             mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
+            self.masked_policy = tf.add(self.policy, mask)
             self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, mask)
         self._setup_init()
         
-    '''def _setup_init(self):
+    def _setup_init(self):
         with tf.variable_scope("output", reuse=True):
             assert self.policy is not None and self.proba_distribution is not None and self.value_fn is not None
             self._action = self.proba_distribution.sample()
             self._deterministic_action = self.proba_distribution.mode()
             self._neglogp = self.proba_distribution.neglogp(self.action)
             self._policy_proba = tf.nn.softmax(self.masked_policy)
-            self._value_flat = self.value_fn[:, 0]'''
+            self._value_flat = self.value_fn[:, 0]
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
@@ -101,32 +105,18 @@ def value_head(y):
     return vf, q
 
 def policy_head(y):
-    y = convolutional(y, 2, 1)
+    y = convolutional(y, 4, 1)
     y = Flatten()(y)
     policy = dense(y, ACTIONS, batch_norm = False, activation = None, name='pi')
+
     return policy
 
 def resnet_extractor(y, **kwargs):
-    part_filters = FILTERS // 2
-
-    a = convolutional(y, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-    a = residual(a, part_filters, (COLS, KERNEL_SIZE))
-
-    b = convolutional(y, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    b = residual(b, part_filters, (KERNEL_SIZE, ROWS))
-    
-    y = tf.concat([a,b], axis=-1)
-    #y = residual(y, FILTERS, KERNEL_SIZE)
+    y = convolutional(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
     return y
 
 def convolutional(y, filters, kernel_size):
