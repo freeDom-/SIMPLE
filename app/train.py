@@ -175,7 +175,7 @@ def cli() -> None:
 
   parser.add_argument("--gamma", "-g",  type = float, default = 0.99
             , help="The value of gamma in PPO")
-  parser.add_argument("--n_steps", "-ns",  type = int, default = 128
+  parser.add_argument("--n_steps", "-ns",  type = int, default = 1024
             , help="How many timesteps should each actor contribute to the batch?")
   parser.add_argument("--cliprange", "-c",  type = float, default = 0.2
             , help="The clip paramater in PPO")
@@ -194,7 +194,7 @@ def cli() -> None:
             , help="The number of epoch to train the PPO agent per batch")
   parser.add_argument("--learning_rate", "-lr",  type = float, default = 0.00025
             , help="The step size for the PPO optimiser")
-  parser.add_argument("--nminibatches", "-nm",  type = int, default = 4
+  parser.add_argument("--nminibatches", "-nm",  type = int, default = 32
             , help="The minibatch size in the PPO optimiser")
 
   # Extract args

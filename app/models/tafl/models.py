@@ -28,20 +28,18 @@ class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistributio
     '''def flatparam(self):
         return self.masked_logits'''
 
-    '''def entropy(self):
+    def entropy(self):
         a_0 = self.masked_logits - tf.reduce_max(self.masked_logits, axis=-1, keepdims=True)
         exp_a_0 = tf.exp(a_0)
         z_0 = tf.reduce_sum(exp_a_0, axis=-1, keepdims=True)
         p_0 = exp_a_0 / z_0
-        return tf.reduce_sum(p_0 * (tf.log(z_0) - a_0), axis=-1)'''
+        return tf.reduce_sum(p_0 * (tf.log(z_0) - a_0), axis=-1)
 
     def sample(self):
         # Gumbel-max trick to sample
         # a categorical distribution (see http://amid.fish/humble-gumbel)
         uniform = tf.random_uniform(tf.shape(self.masked_logits), dtype=self.masked_logits.dtype)
         sample = tf.argmax(self.masked_logits - tf.log(-tf.log(uniform)), axis=-1)
-        print(sample)
-        tf.Print(sample, [sample])
         return sample
 
 
@@ -58,19 +56,18 @@ class CustomPolicy(ActorCriticPolicy):
             self._value_fn, self.q_value = value_head(extracted_features)
             
             # Policy masking
-            mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
-            self.masked_policy = tf.add(self.policy, mask)
+            mask = Lambda(lambda x: (1 - x) * -1e1)(legal_actions)
             self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, mask)
         self._setup_init()
         
-    def _setup_init(self):
+    '''def _setup_init(self):
         with tf.variable_scope("output", reuse=True):
             assert self.policy is not None and self.proba_distribution is not None and self.value_fn is not None
             self._action = self.proba_distribution.sample()
             self._deterministic_action = self.proba_distribution.mode()
             self._neglogp = self.proba_distribution.neglogp(self.action)
             self._policy_proba = tf.nn.softmax(self.masked_policy)
-            self._value_flat = self.value_fn[:, 0]
+            self._value_flat = self.value_fn[:, 0]'''
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
