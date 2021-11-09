@@ -131,7 +131,7 @@ def main(args):
 
   logger.info('\nSetup complete - commencing learning...\n')
 
-  model.learn(total_timesteps=int(1e9), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
+  model.learn(total_timesteps=int(1e7), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
 
   train_env.close()
   del train_env
@@ -166,7 +166,7 @@ def cli() -> None:
 
   parser.add_argument("--n_envs", "-n", type=int, default=1
             , help="How many environments should be used?")
-  parser.add_argument("--eval_freq", "-ef",  type = int, default = 10240
+  parser.add_argument("--eval_freq", "-ef",  type = int, default = 20480
             , help="How many timesteps should each actor contribute before the agent is evaluated?")
   parser.add_argument("--n_eval_episodes", "-ne",  type = int, default = 100
             , help="How many episodes should each actor contribute to the evaluation of the agent?")
@@ -177,9 +177,9 @@ def cli() -> None:
             , help="The value of gamma in PPO")
   parser.add_argument("--n_steps", "-ns",  type = int, default = 1024
             , help="How many timesteps should each actor contribute to the batch?")
-  parser.add_argument("--cliprange", "-c",  type = float, default = 0.2
+  parser.add_argument("--cliprange", "-c",  type = float, default = 0.1
             , help="The clip paramater in PPO")
-  parser.add_argument("--cliprange_vf", "-cvf",  type = float, default = None
+  parser.add_argument("--cliprange_vf", "-cvf",  type = float, default = -1
             , help="The value function clip paramater in PPO")
   parser.add_argument("--ent_coef", "-ent",  type = float, default = 0.01
             , help="The entropy coefficient in PPO")
@@ -194,7 +194,7 @@ def cli() -> None:
             , help="The number of epoch to train the PPO agent per batch")
   parser.add_argument("--learning_rate", "-lr",  type = float, default = 0.00025
             , help="The step size for the PPO optimiser")
-  parser.add_argument("--nminibatches", "-nm",  type = int, default = 32
+  parser.add_argument("--nminibatches", "-nm",  type = int, default = 4
             , help="The minibatch size in the PPO optimiser")
 
   # Extract args

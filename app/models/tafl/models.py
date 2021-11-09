@@ -18,6 +18,7 @@ FEATURE_LAYERS = 32
 ACTION_LAYERS = ACTIONS_PER_TOKEN
 KERNEL_SIZE = 3
 FILTERS = 128
+HALF_FILTERS = FILTERS // 2
 
 
 class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistribution):
@@ -109,9 +110,13 @@ def policy_head(y):
     return policy
 
 def resnet_extractor(y, **kwargs):
-    y = convolutional(y, FILTERS, KERNEL_SIZE)
-    y = residual(y, FILTERS, KERNEL_SIZE)
-    y = residual(y, FILTERS, KERNEL_SIZE)
+    a = convolutional(y, HALF_FILTERS, (ROWS, 1))
+    a = residual(a, HALF_FILTERS, (ROWS, 1))
+
+    b = convolutional(y, HALF_FILTERS, (1, COLS))
+    b = residual(b, HALF_FILTERS, (1, COLS))
+
+    y = tf.concat([a,b], axis=-1)
     y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)
     return y
