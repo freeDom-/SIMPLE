@@ -89,6 +89,7 @@ def main(args):
     , 'schedule':'linear'
     , 'verbose':1
     , 'tensorboard_log':config.LOGDIR
+    , 'n_cpu_tf_sess':args.n_cpu_tf_sess
   }
 
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
@@ -164,7 +165,9 @@ def cli() -> None:
   parser.add_argument("--seed", "-s",  type = int, default = 17
             , help="Random seed")
 
-  parser.add_argument("--n_envs", "-n", type=int, default=1
+  parser.add_argument("--n_cpu_tf_sess", "-cpu", type=int, default = None
+            , help="How many threads tensor flow operations may use. None means unlimited.")
+  parser.add_argument("--n_envs", "-n", type=int, default = 1
             , help="How many environments should be used?")
   parser.add_argument("--eval_freq", "-ef",  type = int, default = 20480
             , help="How many timesteps should each actor contribute before the agent is evaluated?")
