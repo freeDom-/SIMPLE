@@ -180,9 +180,9 @@ def cli() -> None:
             , help="The value of gamma in PPO")
   parser.add_argument("--n_steps", "-ns",  type = int, default = 1024
             , help="How many timesteps should each actor contribute to the batch?")
-  parser.add_argument("--cliprange", "-c",  type = float, default = 0.1
+  parser.add_argument("--cliprange", "-c",  type = float, default = 0.2
             , help="The clip paramater in PPO")
-  parser.add_argument("--cliprange_vf", "-cvf",  type = float, default = -1
+  parser.add_argument("--cliprange_vf", "-cvf",  type = float, default = None
             , help="The value function clip paramater in PPO")
   parser.add_argument("--ent_coef", "-ent",  type = float, default = 0.01
             , help="The entropy coefficient in PPO")

@@ -22,19 +22,30 @@ HALF_FILTERS = FILTERS // 2
 
 
 class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistribution):
-    def __init__(self, logits, mask):
+    def __init__(self, logits, masked_logits):
         super(MaskedCategoricalProbabilityDistribution, self).__init__(logits)
-        self.masked_logits = tf.add(logits, mask)
+        self.masked_logits = masked_logits
 
     '''def flatparam(self):
         return self.masked_logits'''
 
-    def entropy(self):
+    def mode(self):
+        return tf.argmax(self.masked_logits, axis=-1)
+
+    '''def neglogp(self, x):
+        # Note: we can't use sparse_softmax_cross_entropy_with_logits because
+        #       the implementation does not allow second-order derivatives...
+        one_hot_actions = tf.one_hot(x, self.masked_logits.get_shape().as_list()[-1])
+        return tf.nn.softmax_cross_entropy_with_logits_v2(
+            logits=self.masked_logits,
+            labels=tf.stop_gradient(one_hot_actions))'''
+
+    '''def entropy(self):
         a_0 = self.masked_logits - tf.reduce_max(self.masked_logits, axis=-1, keepdims=True)
         exp_a_0 = tf.exp(a_0)
         z_0 = tf.reduce_sum(exp_a_0, axis=-1, keepdims=True)
         p_0 = exp_a_0 / z_0
-        return tf.reduce_sum(p_0 * (tf.log(z_0) - a_0), axis=-1)
+        return tf.reduce_sum(p_0 * (tf.log(z_0) - a_0), axis=-1)'''
 
     def sample(self):
         # Gumbel-max trick to sample
@@ -58,17 +69,18 @@ class CustomPolicy(ActorCriticPolicy):
             
             # Policy masking
             mask = Lambda(lambda x: (1 - x) * -1e1)(legal_actions)
-            self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, mask)
+            self.masked_policy = tf.add(self.policy, mask)
+            self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, self.masked_policy)
         self._setup_init()
         
-    '''def _setup_init(self):
+    def _setup_init(self):
         with tf.variable_scope("output", reuse=True):
             assert self.policy is not None and self.proba_distribution is not None and self.value_fn is not None
             self._action = self.proba_distribution.sample()
             self._deterministic_action = self.proba_distribution.mode()
             self._neglogp = self.proba_distribution.neglogp(self.action)
             self._policy_proba = tf.nn.softmax(self.masked_policy)
-            self._value_flat = self.value_fn[:, 0]'''
+            self._value_flat = self.value_fn[:, 0]
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
@@ -105,9 +117,8 @@ def value_head(y):
 def policy_head(y):
     y = convolutional(y, 4, 1)
     y = Flatten()(y)
-    policy = dense(y, ACTIONS, batch_norm = False, activation = None, name='pi')
-
-    return policy
+    pi = dense(y, ACTIONS, batch_norm = False, activation = None, name='pi')
+    return pi
 
 def resnet_extractor(y, **kwargs):
     a = convolutional(y, HALF_FILTERS, (ROWS, 1))
