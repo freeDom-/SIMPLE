@@ -132,7 +132,7 @@ def main(args):
 
   logger.info('\nSetup complete - commencing learning...\n')
 
-  model.learn(total_timesteps=int(1e7), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
+  model.learn(total_timesteps=int(1e8), callback=[eval_callback], reset_num_timesteps = False, tb_log_name=args.tb_log)
 
   train_env.close()
   del train_env
@@ -196,9 +196,12 @@ def cli() -> None:
   parser.add_argument("--noptepochs", "-oe",  type = int, default = 4
             , help="The number of epoch to train the PPO agent per batch")
   parser.add_argument("--learning_rate", "-lr",  type = float, default = 0.00025
-            , help="The step size for the PPO optimiser")
+            , help="The step size for the PPO optimiser (Learning Rate Range: 0.003 to 5e-6)")
   parser.add_argument("--nminibatches", "-nm",  type = int, default = 32
             , help="The minibatch size in the PPO optimiser")
+
+  parser.add_argument("--tb_log", "-tb",  type = str, default = 'tb'
+            , help="The name of the run for tensorboard logging")
 
   # Extract args
   args = parser.parse_args()

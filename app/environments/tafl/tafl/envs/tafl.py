@@ -34,9 +34,13 @@ GRID_SHAPE = (COLS, ROWS)
 CORNER_SQUARES = [0, ROWS-1, (COLS-1)*ROWS, COLS*ROWS-1]
 CENTER_SQUARE = GRID_SIZE // 2
 SIDE_SQUARES = [x for x in range(GRID_SIZE) if x // COLS in [0, ROWS-1] or x % COLS in [0, COLS-1]]
+BOARDS_STORED = 2
+LAST_BOARDS_STORED = BOARDS_STORED - 1
+CHECK_REPETITIONS = False
+STORE_TURN_COUNTER = False
 
 ACTIONS_PER_TOKEN = COLS + ROWS
-MAX_TURN_COUNT = 128
+MAX_TURN_COUNT = 64
 
 RULE_HARD_KING_CAPTURE = False
 RULE_SURROUND_WHITE_WINS = False
@@ -131,14 +135,16 @@ class TaflEnv(gym.Env):
         self.initial_board = SMALL_BOARD
         # Actions: all board positions * maximal possible moves (+ resign)
         self.action_space = gym.spaces.Discrete(GRID_SIZE * ACTIONS_PER_TOKEN)
-        # Observation: current state (black tokens, white tokens, king, 1x repeated, 2x repeated) x 6 + current player + turn count +  actions_per_token
-        feature_count = 5 * 6 + 2 + ACTIONS_PER_TOKEN
+        # Observation: current state (black tokens, white tokens, king, 1x repeated, 2x repeated) x number of boards + current player + turn count +  actions_per_token
+        # Observation: current state (black tokens, white tokens, king) x number of boards + current player + actions_per_token
+        feature_count = (5 if CHECK_REPETITIONS else 3) * BOARDS_STORED + (2 if STORE_TURN_COUNTER else 1) + ACTIONS_PER_TOKEN
         self.observation_space = gym.spaces.Box(0, 1, GRID_SHAPE + (feature_count,))
 
     @property
     def observation(self):
         out = []
 
+        # Remove multiple boards to simplify problem
         all_boards = [self.board]
         all_boards.extend(self.last_boards)
 
@@ -150,21 +156,23 @@ class TaflEnv(gym.Env):
             white_tokens = np.array([1 if x and x.type == WHITE_TOKEN else 0 for x in board]).reshape(GRID_SHAPE)
             king = np.array([1 if x and x.type == KING else 0 for x in board]).reshape(GRID_SHAPE)
             
-            if repetition == 0:
-                repeated_once = np.zeros(GRID_SHAPE)
-                repeated_twice = np.zeros(GRID_SHAPE)
-            elif repetition == 1:
-                repeated_once = np.ones(GRID_SHAPE)
-                repeated_twice = np.zeros(GRID_SHAPE)
-            else:
-                repeated_once = np.ones(GRID_SHAPE)
-                repeated_twice = np.ones(GRID_SHAPE)
-
             out.append(black_tokens)
             out.append(white_tokens)
             out.append(king)
-            out.append(repeated_once)
-            out.append(repeated_twice)
+
+            if CHECK_REPETITIONS:
+                if repetition == 0:
+                    repeated_once = np.zeros(GRID_SHAPE)
+                    repeated_twice = np.zeros(GRID_SHAPE)
+                elif repetition == 1:
+                    repeated_once = np.ones(GRID_SHAPE)
+                    repeated_twice = np.zeros(GRID_SHAPE)
+                else:
+                    repeated_once = np.ones(GRID_SHAPE)
+                    repeated_twice = np.ones(GRID_SHAPE)
+
+                out.append(repeated_once)
+                out.append(repeated_twice)
 
         if self.current_player == self.black_player:
             player = np.zeros(GRID_SHAPE)
@@ -172,8 +180,9 @@ class TaflEnv(gym.Env):
             player = np.ones(GRID_SHAPE)
         out.append(player)
 
-        turns_taken = np.full(GRID_SHAPE, self.turns_taken / MAX_TURN_COUNT)
-        out.append(turns_taken)
+        if STORE_TURN_COUNTER:
+            turns_taken = np.full(GRID_SHAPE, self.turns_taken / MAX_TURN_COUNT)
+            out.append(turns_taken)
 
         la = self.legal_actions
         la.resize(ACTIONS_PER_TOKEN, COLS, ROWS)
@@ -333,7 +342,7 @@ class TaflEnv(gym.Env):
                 return 1, True
 
         # Perpetual repetition
-        if self.repetition == 2:
+        if CHECK_REPETITIONS and self.repetition == 2:
             return -1, True
 
         if self.turns_taken > MAX_TURN_COUNT:
@@ -449,7 +458,7 @@ class TaflEnv(gym.Env):
             reward = [1,1]
             reward[self.current_player_num] = -1
         else:
-            for i in range(4, 0, -1):
+            for i in range(LAST_BOARDS_STORED-1, 0, -1):
                 self.last_boards[i] = self.last_boards[i-1]
                 self.last_repetitions[i] = self.last_repetitions[i-1]
             self.last_boards[0] = self.board.copy()
@@ -467,7 +476,7 @@ class TaflEnv(gym.Env):
 
             self.turns_taken += 1
 
-            if self.board == self.last_boards[3] and self.last_boards[0] == self.last_boards[4]:
+            if CHECK_REPETITIONS and self.board == self.last_boards[3] and self.last_boards[0] == self.last_boards[4]:
                 self.repetition = self.last_repetitions[3] + 1
             else:
                 self.repetition = 0
@@ -486,8 +495,8 @@ class TaflEnv(gym.Env):
     def reset(self):
         self.board = []
         self.repetition = 0
-        self.last_boards = [[0]*GRID_SIZE]*5
-        self.last_repetitions = [0]*5
+        self.last_boards = [[0]*GRID_SIZE]*LAST_BOARDS_STORED
+        self.last_repetitions = [0]*LAST_BOARDS_STORED
         self.all_tokens = []
         self.king = None
         Token.count = 0

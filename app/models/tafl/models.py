@@ -14,10 +14,11 @@ GRID_SIZE = COLS * ROWS
 ACTIONS_PER_TOKEN = ROWS + COLS
 
 ACTIONS = ROWS * COLS * ACTIONS_PER_TOKEN
-FEATURE_LAYERS = 32
+#FEATURE_LAYERS = 32
 ACTION_LAYERS = ACTIONS_PER_TOKEN
 KERNEL_SIZE = 3
-FILTERS = 128
+VALUE_FILTERS = 128
+FILTERS = 64
 HALF_FILTERS = FILTERS // 2
 
 
@@ -78,6 +79,7 @@ class CustomPolicy(ActorCriticPolicy):
             self._value_fn, self.q_value = value_head(extracted_features)
             
             # Policy masking
+            #mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
             mask = Lambda(lambda x: (1 - x) * -1e1)(legal_actions)
             self.masked_policy = tf.add(self.policy, mask)
             self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, self.masked_policy)
@@ -119,7 +121,7 @@ def split_input(obs):
 def value_head(y):
     y = convolutional(y, 1, 1)
     y = Flatten()(y)
-    y = dense(y, 256, batch_norm = False)
+    y = dense(y, VALUE_FILTERS, batch_norm = False)
     vf = dense(y, 1, batch_norm = False, activation = 'tanh', name='vf')
     q = dense(y, ACTIONS, batch_norm = False, activation = 'tanh', name='q')
     return vf, q

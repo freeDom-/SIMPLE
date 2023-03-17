@@ -34,7 +34,7 @@ class Agent():
     top5_actions = action_probs[top5_action_idx]
     try:
       logger.debug(f"Top 5 actions: {[str(i) + ' (' + env.parse_action_num(i) + '): ' + str(round(a,2))[:5] for i,a in zip(top5_action_idx, top5_actions)]}")
-    except NotImplementedError:
+    except (NotImplementedError, AttributeError) as e:
       logger.debug(f"Top 5 actions: {[str(i) + ': ' + str(round(a,2))[:5] for i,a in zip(top5_action_idx, top5_actions)]}")
 
   def choose_action(self, env, choose_best_action, mask_invalid_actions):
@@ -56,14 +56,14 @@ class Agent():
       action = np.argmax(action_probs)
       try:
         logger.debug(f'Best action {action} ({env.parse_action_num(action)})')
-      except NotImplementedError:
+      except (NotImplementedError, AttributeError) as e:
         logger.debug(f'Best action {action}')
 
       if not choose_best_action:
           action = sample_action(action_probs)
           try:
             logger.debug(f'Sampled action {action} ({env.parse_action_num(action)}) chosen')
-          except NotImplementedError:
+          except (NotImplementedError, AttributeError) as e:
             logger.debug(f'Sampled action {action} chosen')
 
       return action
