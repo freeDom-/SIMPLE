@@ -82,7 +82,7 @@ class CustomPolicy(ActorCriticPolicy):
             #mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
             mask = Lambda(lambda x: (1 - x) * -1e1)(legal_actions)
             self.masked_policy = tf.add(self.policy, mask)
-            self._proba_distribution  = MaskedCategoricalProbabilityDistribution(self.policy, self.masked_policy)
+            self._proba_distribution = MaskedCategoricalProbabilityDistribution(self.policy, self.masked_policy)
         self._setup_init()
         
     def _setup_init(self):
@@ -121,15 +121,15 @@ def split_input(obs):
 def value_head(y):
     y = convolutional(y, 1, 1)
     y = Flatten()(y)
-    y = dense(y, VALUE_FILTERS, batch_norm = False)
+    y = dense(y, VALUE_FILTERS, batch_norm = True)
     vf = dense(y, 1, batch_norm = False, activation = 'tanh', name='vf')
     q = dense(y, ACTIONS, batch_norm = False, activation = 'tanh', name='q')
     return vf, q
 
 def policy_head(y):
-    y = convolutional(y, 4, 1)
+    y = convolutional(y, 32, 1)
     y = Flatten()(y)
-    pi = dense(y, ACTIONS, batch_norm = False, activation = None, name='pi')
+    pi = dense(y, ACTIONS, batch_norm = True, activation = 'relu', name='pi')
     return pi
 
 def resnet_extractor(y, **kwargs):
@@ -140,6 +140,12 @@ def resnet_extractor(y, **kwargs):
     b = residual(b, HALF_FILTERS, (1, COLS))
 
     y = tf.concat([a,b], axis=-1)
+    y = convolutional(y, FILTERS, KERNEL_SIZE)
+
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)
     return y
