@@ -30,6 +30,22 @@ from utils.selfplay import selfplay_wrapper
 
 import config
 
+def make_env(env_id, rank, seed=0):
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: (str) the environment ID
+    :param num_env: (int) the number of environments you wish to have in subprocesses
+    :param seed: (int) the inital seed for RNG
+    :param rank: (int) index of the subprocess
+    """
+    def _init():
+        env = gym.make(env_id)
+        env.seed(seed + rank)
+        return env
+    set_global_seeds(seed)
+    return _init
+
 def main(args):
 
   # Raise exception on fp error to prevent NaN and inf values
@@ -65,7 +81,8 @@ def main(args):
   base_env = get_environment(args.env_name)
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
-  #train_env = make_vec_env(lambda :env, n_envs=args.n_envs, vec_env_cls=Type[SubprocVecEnv])
+  #train_env = SubprocVecEnv([make_env(env, i) for i in range(args.n_envs)], start_method='spawn')
+  #train_env = make_vec_env(lambda: env, n_envs=args.n_envs, vec_env_cls=SubprocVecEnv, vec_env_kwargs=dict(start_method='spawn'))
   train_env = make_vec_env(lambda :env, n_envs=args.n_envs)
   eval_env = make_vec_env(lambda :env, n_envs=1)
 

@@ -18,52 +18,8 @@ ACTIONS = ROWS * COLS * ACTIONS_PER_TOKEN
 ACTION_LAYERS = ACTIONS_PER_TOKEN
 KERNEL_SIZE = 3
 VALUE_FILTERS = 128
-FILTERS = 64
+FILTERS = 128
 HALF_FILTERS = FILTERS // 2
-
-
-class MaskedCategoricalProbabilityDistribution(CategoricalProbabilityDistribution):
-    def __init__(self, logits, masked_logits):
-        super(MaskedCategoricalProbabilityDistribution, self).__init__(logits)
-        self.masked_logits = masked_logits
-
-    def flatparam(self):
-        return self.masked_logits
-
-    def mode(self):
-        return tf.argmax(self.masked_logits, axis=-1)
-
-    '''def neglogp(self, x):
-        # Note: we can't use sparse_softmax_cross_entropy_with_logits because
-        #       the implementation does not allow second-order derivatives...
-        one_hot_actions = tf.one_hot(x, self.masked_logits.get_shape().as_list()[-1])
-        return tf.nn.softmax_cross_entropy_with_logits_v2(
-            logits=self.masked_logits,
-            labels=tf.stop_gradient(one_hot_actions))'''
-
-    '''def kl(self, other):
-        a_0 = self.masked_logits - tf.reduce_max(self.masked_logits, axis=-1, keepdims=True)
-        a_1 = other.masked_logits - tf.reduce_max(other.masked_logits, axis=-1, keepdims=True)
-        exp_a_0 = tf.exp(a_0)
-        exp_a_1 = tf.exp(a_1)
-        z_0 = tf.reduce_sum(exp_a_0, axis=-1, keepdims=True)
-        z_1 = tf.reduce_sum(exp_a_1, axis=-1, keepdims=True)
-        p_0 = exp_a_0 / z_0
-        return tf.reduce_sum(p_0 * (a_0 - tf.log(z_0) - a_1 + tf.log(z_1)), axis=-1)'''
-
-    '''def entropy(self):
-        a_0 = self.masked_logits - tf.reduce_max(self.masked_logits, axis=-1, keepdims=True)
-        exp_a_0 = tf.exp(a_0)
-        z_0 = tf.reduce_sum(exp_a_0, axis=-1, keepdims=True)
-        p_0 = exp_a_0 / z_0
-        return tf.reduce_sum(p_0 * (tf.log(z_0) - a_0), axis=-1)'''
-
-    def sample(self):
-        # Gumbel-max trick to sample
-        # a categorical distribution (see http://amid.fish/humble-gumbel)
-        uniform = tf.random_uniform(tf.shape(self.masked_logits), dtype=self.masked_logits.dtype)
-        sample = tf.argmax(self.masked_logits - tf.log(-tf.log(uniform)), axis=-1)
-        return sample
 
 
 class CustomPolicy(ActorCriticPolicy):
@@ -71,28 +27,13 @@ class CustomPolicy(ActorCriticPolicy):
         super(CustomPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse, scale=True)
 
         with tf.variable_scope("model", reuse=reuse):
-            obs, legal_actions = split_input(self.processed_obs)
-            #obs = tf.Print(obs, [obs], summarize=-1)
-            extracted_features = resnet_extractor(obs, **kwargs)
+            extracted_features = resnet_extractor(self.processed_obs, **kwargs)
 
             self._policy = policy_head(extracted_features)
             self._value_fn, self.q_value = value_head(extracted_features)
             
-            # Policy masking
-            #mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
-            mask = Lambda(lambda x: (1 - x) * -1e1)(legal_actions)
-            self.masked_policy = tf.add(self.policy, mask)
-            self._proba_distribution = MaskedCategoricalProbabilityDistribution(self.policy, self.masked_policy)
+            self._proba_distribution = CategoricalProbabilityDistribution(self.policy)
         self._setup_init()
-        
-    def _setup_init(self):
-        with tf.variable_scope("output", reuse=True):
-            assert self.policy is not None and self.proba_distribution is not None and self.value_fn is not None
-            self._action = self.proba_distribution.sample()
-            self._deterministic_action = self.proba_distribution.mode()
-            self._neglogp = self.proba_distribution.neglogp(self.action)
-            self._policy_proba = tf.nn.softmax(self.masked_policy)
-            self._value_flat = self.value_fn[:, 0]
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
@@ -109,39 +50,44 @@ class CustomPolicy(ActorCriticPolicy):
     def value(self, obs, state=None, mask=None):
         return self.sess.run(self.value_flat, {self.obs_ph: obs})
 
-
-def split_input(obs):
-    #features = obs
-    features = obs[...,:-ACTION_LAYERS]
-    actions = obs[...,-ACTION_LAYERS:]
-    actions = tf.concat([tf.unstack(actions, axis=-1)], 0)
-    actions = tf.reshape(actions, [-1, ACTION_LAYERS*GRID_SIZE])
-    return features, actions
-
 def value_head(y):
     y = convolutional(y, 1, 1)
     y = Flatten()(y)
-    y = dense(y, VALUE_FILTERS, batch_norm = True)
-    vf = dense(y, 1, batch_norm = False, activation = 'tanh', name='vf')
-    q = dense(y, ACTIONS, batch_norm = False, activation = 'tanh', name='q')
+    y = BatchNormalization(momentum = 0.9)(y)
+    y = Activation('relu')(y)
+    y = Dense(VALUE_FILTERS)(y)
+    y = Activation('relu')(y)
+    vf = Dense(1)(y)
+    vf = Activation('tanh')(vf)
+    q = Dense(ACTIONS)(y)
+    q = Activation('tanh')(q)
+    #y = dense(y, VALUE_FILTERS, batch_norm = True)
+    #vf = dense(y, 1, batch_norm = False, activation = 'tanh', name='vf')
+    #q = dense(y, ACTIONS, batch_norm = False, activation = 'tanh', name='q')
     return vf, q
 
 def policy_head(y):
-    y = convolutional(y, 32, 1)
+    y = convolutional(y, 2, 1)
     y = Flatten()(y)
-    pi = dense(y, ACTIONS, batch_norm = True, activation = 'relu', name='pi')
+    y = BatchNormalization(momentum = 0.9)(y)
+    y = Activation('relu')(y)
+    pi = y = Dense(ACTIONS)(y)
+    #pi = dense(y, ACTIONS, batch_norm = True, activation = 'relu', name='pi')
     return pi
 
 def resnet_extractor(y, **kwargs):
     a = convolutional(y, HALF_FILTERS, (ROWS, 1))
-    a = residual(a, HALF_FILTERS, (ROWS, 1))
+    #a = residual(a, HALF_FILTERS, (ROWS, 1))
 
     b = convolutional(y, HALF_FILTERS, (1, COLS))
-    b = residual(b, HALF_FILTERS, (1, COLS))
+    #b = residual(b, HALF_FILTERS, (1, COLS))
 
     y = tf.concat([a,b], axis=-1)
-    y = convolutional(y, FILTERS, KERNEL_SIZE)
+    #y = convolutional(y, FILTERS, KERNEL_SIZE)
 
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
+    y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)
     y = residual(y, FILTERS, KERNEL_SIZE)

@@ -135,9 +135,9 @@ class TaflEnv(gym.Env):
         self.initial_board = SMALL_BOARD
         # Actions: all board positions * maximal possible moves (+ resign)
         self.action_space = gym.spaces.Discrete(GRID_SIZE * ACTIONS_PER_TOKEN)
-        # Observation: current state (black tokens, white tokens, king, 1x repeated, 2x repeated) x number of boards + current player + turn count +  actions_per_token
-        # Observation: current state (black tokens, white tokens, king) x number of boards + current player + actions_per_token
-        feature_count = (5 if CHECK_REPETITIONS else 3) * BOARDS_STORED + (2 if STORE_TURN_COUNTER else 1) + ACTIONS_PER_TOKEN
+        # Observation: current state (black tokens, white tokens, king, 1x repeated, 2x repeated) x number of boards + current player + turn count
+        # Observation: current state (black tokens, white tokens, king) x number of boards + current player
+        feature_count = (5 if CHECK_REPETITIONS else 3) * BOARDS_STORED + (2 if STORE_TURN_COUNTER else 1)
         self.observation_space = gym.spaces.Box(0, 1, GRID_SHAPE + (feature_count,))
 
     @property
@@ -183,10 +183,6 @@ class TaflEnv(gym.Env):
         if STORE_TURN_COUNTER:
             turns_taken = np.full(GRID_SHAPE, self.turns_taken / MAX_TURN_COUNT)
             out.append(turns_taken)
-
-        la = self.legal_actions
-        la.resize(ACTIONS_PER_TOKEN, COLS, ROWS)
-        out.extend(la)
 
         out = np.stack(out, axis=-1)
         return out
