@@ -19,7 +19,7 @@ from stable_baselines.ppo2 import PPO2
 from stable_baselines.common.callbacks import EvalCallback
 
 from stable_baselines.common import set_global_seeds
-from stable_baselines.common.vec_env import DummyVecEnv, VecCheckNan, VecNormalize
+from stable_baselines.common.vec_env import SubprocVecEnv, DummyVecEnv, VecCheckNan, VecNormalize
 from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines import logger
 
@@ -65,6 +65,7 @@ def main(args):
   base_env = get_environment(args.env_name)
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
+  #train_env = make_vec_env(lambda :env, n_envs=args.n_envs, vec_env_cls=Type[SubprocVecEnv])
   train_env = make_vec_env(lambda :env, n_envs=args.n_envs)
   eval_env = make_vec_env(lambda :env, n_envs=1)
 
