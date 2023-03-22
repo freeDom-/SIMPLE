@@ -11,7 +11,6 @@ from shutil import copyfile
 
 from stable_baselines3.ppo import PPO
 
-from stable_baselines3.common import logger as sb_logger
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecCheckNan, VecNormalize
@@ -24,14 +23,15 @@ from utils.selfplay import selfplay_wrapper
 
 import config
 
+from stable_baselines3.common import logger as sb_logger
+logger = sb_logger.configure(config.LOGDIR, ['stdout'])
+
 def main(args):
 
   # Raise exception on fp error to prevent NaN and inf values
   np.seterr(all='raise')
 
   model_dir = os.path.join(config.MODELDIR, args.env_name)
-
-  logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
   #if rank == 0:
   try:
