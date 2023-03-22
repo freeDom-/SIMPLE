@@ -10,8 +10,8 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 import random
 import argparse
 
-from stable_baselines import logger
-from stable_baselines.common import set_global_seeds
+from stable_baselines3 import logger
+from stable_baselines3.common import set_global_seeds
 
 from utils.files import load_model, write_results
 from utils.register import get_environment

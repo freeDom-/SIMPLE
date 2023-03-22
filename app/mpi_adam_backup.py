@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import mpi4py
 
-import stable_baselines.common.tf_util as tf_utils
+import stable_baselines3.common.tf_util as tf_utils
 
 
 class MpiAdam(object):

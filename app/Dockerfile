@@ -1,8 +1,4 @@
-#FROM ubuntu:bionic-20200219 as base
-FROM tensorflow/tensorflow:1.15.5-gpu-py3-jupyter as base
-
-RUN apt-key del 7fa2af80 && \
-    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime as base
 
 RUN apt-get update
 RUN apt-get -y install ssh
@@ -10,11 +6,9 @@ RUN apt-get -y install python3-pip
 RUN apt-get -y install htop
 RUN apt-get -y install libpq-dev
 
-RUN apt-get update 
-RUN apt-get -y install cmake libopenmpi-dev python3-dev zlib1g-dev libgl1-mesa-dev
+RUN apt-get -y install cmake python3-dev zlib1g-dev libgl1-mesa-dev
 
 RUN pip3 install --upgrade pip
-RUN pip3 install --upgrade setuptools
 
 RUN useradd -ms /bin/bash selfplay
 USER selfplay

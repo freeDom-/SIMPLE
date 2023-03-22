@@ -5,8 +5,8 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 from tensorflow.keras.layers import BatchNormalization, Activation, Flatten, Add, Dense, Multiply, Concatenate, Lambda
 import tensorflow.keras.backend as K
-from stable_baselines.common.policies import ActorCriticPolicy
-from stable_baselines.common.distributions import CategoricalProbabilityDistribution
+from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.distributions import CategoricalProbabilityDistribution
 
 
 ACTIONS = 36

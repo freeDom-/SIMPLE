@@ -1,10 +1,9 @@
 import os
 import numpy as np
 from shutil import copyfile
-from mpi4py import MPI
 
-from stable_baselines.common.callbacks import EvalCallback
-from stable_baselines import logger
+from stable_baselines3.common import logger
+from stable_baselines3.common.callbacks import EvalCallback
 
 from utils.files import get_best_model_name, get_model_stats
 
@@ -34,20 +33,19 @@ class SelfPlayCallback(EvalCallback):
 
       result = super(SelfPlayCallback, self)._on_step() #this will set self.best_mean_reward to the reward from the evaluation as it's previously -np.inf
 
-      list_of_rewards = MPI.COMM_WORLD.allgather(self.best_mean_reward)
+      # TODO: rewrite gathering data from different environments
+      list_of_rewards = [self.best_mean_reward]
       av_reward = np.mean(list_of_rewards)
       std_reward = np.std(list_of_rewards)
-      av_timesteps = np.mean(MPI.COMM_WORLD.allgather(self.num_timesteps))
-      total_episodes = np.sum(MPI.COMM_WORLD.allgather(self.n_eval_episodes))
+      av_timesteps = np.mean([self.num_timesteps])
+      total_episodes = np.sum([self.n_eval_episodes])
 
       if self.callback is not None:
-        rules_based_rewards = MPI.COMM_WORLD.allgather(self.callback.best_mean_reward)
+        rules_based_rewards = [self.callback.best_mean_reward]
         av_rules_based_reward = np.mean(rules_based_rewards)
 
-      rank = MPI.COMM_WORLD.Get_rank()
-      if rank == 0:
-        logger.info("Eval num_timesteps={}, episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, av_reward, std_reward))
-        logger.info("Total episodes ran={}".format(total_episodes))
+      logger.info("Eval num_timesteps={}, episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, av_reward, std_reward))
+      logger.info("Total episodes ran={}".format(total_episodes))
 
       #compare the latest reward against the threshold
       if result and av_reward > self.threshold:

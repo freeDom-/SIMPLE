@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 import random
@@ -7,19 +5,16 @@ import csv
 import time
 import numpy as np
 
-from mpi4py import MPI
-
 from shutil import rmtree
-from stable_baselines.ppo2 import PPO2
-from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.common.cmd_util import make_vec_env
+from stable_baselines3.ppo import PPO
+from stable_baselines3.common import logger as sb_logger
+from stable_baselines3.common.env_util import make_vec_env
 
-from utils.register import get_network_arch
+from utils.register import get_network_arch, get_policy_kwargs
 
 import config
 
-from stable_baselines import logger
-
+logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
 def write_results(players, game, games, episode_length):
     
@@ -51,7 +46,7 @@ def load_model(env, name):
         while cont:
             try:
                 env = make_vec_env(lambda :env, n_envs=1)
-                ppo_model = PPO2.load(filename, env=env)
+                ppo_model = PPO.load(filename, env=env)
                 cont = False
             except Exception as e:
                 time.sleep(5)
@@ -61,15 +56,13 @@ def load_model(env, name):
         cont = True
         while cont:
             try:
+                ppo_model = PPO(policy=get_network_arch(env.name), env=env,
+                                policy_kwargs=get_policy_kwargs(env.name))
+                logger.info(f'Saving base.zip PPO model...')
+                ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
                 
-                rank = MPI.COMM_WORLD.Get_rank()
-                if rank == 0:
-                    ppo_model = PPO2(get_network_arch(env.name), env=env)
-                    logger.info(f'Saving base.zip PPO model...')
-                    ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
-                else:
-
-                    ppo_model = PPO2.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
+                # TODO: Load model when running multi environments
+                #ppo_model = PPO.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
 
                 cont = False
             except IOError as e:

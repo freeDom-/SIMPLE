@@ -5,7 +5,8 @@ import re
 
 import config
 
-from stable_baselines import logger
+from stable_baselines3.common import logger as sb_logger
+logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
 BLACK = "BLACK"
 WHITE = "WHITE"

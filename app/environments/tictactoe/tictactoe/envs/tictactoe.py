@@ -5,7 +5,7 @@ import numpy as np
 
 import config
 
-from stable_baselines import logger
+from stable_baselines3 import logger
 
 
 class Player():

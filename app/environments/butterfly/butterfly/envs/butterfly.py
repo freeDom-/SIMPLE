@@ -5,7 +5,7 @@ import random
 
 import config
 
-from stable_baselines import logger
+from stable_baselines3 import logger
 
 from .classes import *
 

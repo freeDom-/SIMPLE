@@ -1,2 +1,1 @@
-stable-baselines[mpi]==2.10.1
-pillow
+stable-baselines3

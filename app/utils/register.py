@@ -58,3 +58,12 @@ def get_network_arch(env_name):
     else:
         raise Exception(f'No model architectures found for {env_name}')
 
+def get_policy_kwargs(env_name):
+    if env_name in ('tafl'):
+        from models.tafl.models import CustomCNN, FILTERS
+        return dict(
+            features_extractor_class=CustomCNN,
+            features_extractor_kwargs=dict(features_dim=FILTERS),
+        )
+    else:
+        raise Exception(f'No policy kwargs defined for {env_name}')

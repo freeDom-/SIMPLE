@@ -5,8 +5,8 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 from tensorflow.keras.layers import BatchNormalization, Activation, Flatten, Conv2D, Add, Dense, Dropout
 
-from stable_baselines.common.policies import ActorCriticPolicy
-from stable_baselines.common.distributions import CategoricalProbabilityDistributionType, CategoricalProbabilityDistribution
+from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.distributions import CategoricalProbabilityDistributionType, CategoricalProbabilityDistribution
 
 
 class CustomPolicy(ActorCriticPolicy):

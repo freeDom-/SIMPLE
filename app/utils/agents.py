@@ -4,9 +4,12 @@ np.set_printoptions(threshold=sys.maxsize)
 import random
 import string
 
+from stable_baselines3.common.policies import obs_as_tensor
+
 import config
 
-from stable_baselines import logger
+from stable_baselines3.common import logger as sb_logger
+logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
 def sample_action(action_probs):
     action = np.random.choice(len(action_probs), p = action_probs)
@@ -18,9 +21,17 @@ def mask_actions(legal_actions, action_probs):
     masked_action_probs = masked_action_probs / np.sum(masked_action_probs)
     return masked_action_probs
 
+def action_probability(model, observation):
+    obs = model.policy.obs_to_tensor(observation)[0]
+    dis = model.policy.get_distribution(obs)
+    probs = dis.distribution.probs
+    probs_np = probs.detach().numpy()
+    return probs_np
 
-
-
+def predict_values(model, observation):
+    obs = model.policy.obs_to_tensor(observation)[0]
+    values = model.policy.predict_values(obs).tolist()
+    return values
 
 class Agent():
   def __init__(self, name, model = None):
@@ -42,8 +53,10 @@ class Agent():
         action_probs = np.array(env.rules_move())
         value = None
       else:
-        action_probs = self.model.action_probability(env.observation)
-        value = self.model.value(np.array([env.observation]))[0]
+        # TODO: need verification if first item is current action probs
+        action_probs = action_probability(self.model, env.observation)[0]
+        # TODO: need verification if first item of tensor is current value
+        value = predict_values(self.model, env.observation)[0][0]
         logger.debug(f'Value {value:.2f}')
 
       self.print_top_actions(env, action_probs)
