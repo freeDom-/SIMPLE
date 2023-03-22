@@ -51,7 +51,7 @@ class CustomPolicy(ActorCriticPolicy):
         return self.sess.run(self.value_flat, {self.obs_ph: obs})
 
 def value_head(y):
-    y = convolutional(y, 1, 1)
+    y = Conv2D(1, kernel_size=1, strides=1, padding='same')(y)
     y = Flatten()(y)
     y = BatchNormalization(momentum = 0.9)(y)
     y = Activation('relu')(y)
@@ -67,7 +67,7 @@ def value_head(y):
     return vf, q
 
 def policy_head(y):
-    y = convolutional(y, 2, 1)
+    y = Conv2D(2, kernel_size=1, strides=1, padding='same')(y)
     y = Flatten()(y)
     y = BatchNormalization(momentum = 0.9)(y)
     y = Activation('relu')(y)
