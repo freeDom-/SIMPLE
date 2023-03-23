@@ -112,7 +112,8 @@ def main(args):
     callback_args['callback_on_new_best'] = eval_actual_callback
     
   # Evaluate the agent against previous versions
-  eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  #eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  eval_callback = EvalCallback(**callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 
