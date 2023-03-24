@@ -46,11 +46,15 @@ class CustomCNN(BaseFeaturesExtractor):
             nn.Conv2d(n_input_channels, HALF_FILTERS, (1, COLS), padding='same'),
             nn.BatchNorm2d(HALF_FILTERS), nn.ReLU()
         )
-        self.residual = nn.Sequential(
-            nn.Conv2d(FILTERS, FILTERS, KERNEL_SIZE, padding='same'),
-            nn.BatchNorm2d(FILTERS), nn.ReLU(),
-            nn.Conv2d(FILTERS, FILTERS, KERNEL_SIZE, padding='same'),
-            nn.BatchNorm2d(FILTERS)
+        # 128, 256, 384, 512, ... Input Channels, because of skip connection
+        self.residual = nn.ModuleList(
+            list(np.concatenate(
+            [[
+                nn.Conv2d((i+1)*FILTERS, FILTERS, KERNEL_SIZE, padding='same'),
+                nn.BatchNorm2d(FILTERS), nn.ReLU(),
+                nn.Conv2d(FILTERS, FILTERS, KERNEL_SIZE, padding='same'),
+                nn.BatchNorm2d(FILTERS)
+            ] for i in range(RESIDUAL_LAYERS)]).flat)
         )
         self.relu = nn.ReLU()
 
@@ -62,12 +66,16 @@ class CustomCNN(BaseFeaturesExtractor):
         y = th.cat((a, b), -1)'''
 
         y = self.conv(observations)
+        # Residual Layer with skip connection
         for i in range(RESIDUAL_LAYERS):
             x = y
-            y = self.residual(x)
-            y = th.cat((y, x), 0)
+            y = self.residual[i*5](x)
+            y = self.residual[i*5+1](y)
+            y = self.residual[i*5+2](y)
+            y = self.residual[i*5+3](y)
+            y = self.residual[i*5+4](y)
+            y = th.cat((y, x), 1)
             y = self.relu(y)
-
         return y
 
 
@@ -93,14 +101,14 @@ class CustomNetwork(nn.Module):
 
         # Policy network
         self.policy_net = nn.Sequential(
-            nn.Conv2d(feature_dim, 2, 1, padding='same'),
+            nn.Conv2d(FILTERS * (RESIDUAL_LAYERS+1), 2, 1, padding='same'),
             nn.Flatten(),
             nn.BatchNorm1d(2 * GRID_SIZE), nn.ReLU(),
             nn.Linear(2 * GRID_SIZE, last_layer_dim_pi)
         )
         # Value network
         self.value_net = nn.Sequential(
-            nn.Conv2d(feature_dim, 1, 1, padding='same'),
+            nn.Conv2d(FILTERS * (RESIDUAL_LAYERS+1), 1, 1, padding='same'),
             nn.Flatten(),
             nn.BatchNorm1d(GRID_SIZE), nn.ReLU(),
             nn.Linear(GRID_SIZE, VALUE_FILTERS), nn.ReLU(),
@@ -115,7 +123,8 @@ class CustomNetwork(nn.Module):
         return self.forward_actor(features), self.forward_critic(features)
 
     def forward_actor(self, features: th.Tensor) -> th.Tensor:
-        return self.policy_net(features)
+        x = self.policy_net(features)
+        return x
 
     def forward_critic(self, features: th.Tensor) -> th.Tensor:
         return self.value_net(features)

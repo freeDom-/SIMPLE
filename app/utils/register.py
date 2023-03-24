@@ -63,7 +63,7 @@ def get_policy_kwargs(env_name):
         from models.tafl.models import CustomCNN, FILTERS
         return dict(
             features_extractor_class=CustomCNN,
-            features_extractor_kwargs=dict(features_dim=FILTERS),
+            features_extractor_kwargs=dict(features_dim=FILTERS*2),
         )
     else:
         raise Exception(f'No policy kwargs defined for {env_name}')

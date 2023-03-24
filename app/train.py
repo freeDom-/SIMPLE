@@ -4,6 +4,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 import numpy as np
+import gym
 
 import argparse
 import time
@@ -25,6 +26,23 @@ import config
 
 from stable_baselines3.common import logger as sb_logger
 logger = sb_logger.configure(config.LOGDIR, ['stdout'])
+
+def make_env(env_id, rank, opponent_type, verbose, seed=0):
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: (str) the environment IDs
+    :param seed: (int) the inital seed for RNG
+    :param rank: (int) index of the subprocess
+    """
+    def _init():
+        base_env = get_environment(env_id)
+        env = selfplay_wrapper(base_env)(opponent_type = opponent_type, verbose = verbose)
+        #env = gym.make(env_id)
+        env.seed(seed + rank)
+        return env
+    set_random_seed(seed)
+    return _init
 
 def main(args):
 
@@ -48,17 +66,14 @@ def main(args):
     time.sleep(5)
     logger.set_level(config.INFO)
 
-  workerseed = args.seed + 10000 # * rank
-  set_random_seed(workerseed)
-
   logger.info('\nSetting up the selfplay training environment opponents...')
-  base_env = get_environment(args.env_name)
-  env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
-  env.seed(workerseed)
-  train_env = make_vec_env(lambda :env, n_envs=args.n_envs)
-  eval_env = make_vec_env(lambda :env, n_envs=1)
-  
-  CustomPolicy = get_network_arch(args.env_name)
+  #base_env = get_environment(args.env_name)
+  #env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
+  #env.seed(workerseed)
+  #train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=args.n_envs)
+  #eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=1)
+  train_env = DummyVecEnv([make_env(args.env_name, i, args.opponent_type, args.verbose) for i in range(args.n_envs)])
+  eval_env = DummyVecEnv([make_env(args.env_name, 0, args.opponent_type, args.verbose)])
 
   params = {'gamma':args.gamma
     , 'n_steps':args.n_steps
@@ -98,8 +113,10 @@ def main(args):
     'verbose' : 0
   }
 
-  if args.rules:  
-    logger.info('\nSetting up the evaluation environment against the rules-based agent...')
+  if args.rules:
+    logger.error('\nRule-based agent is currently not supported...')
+    return
+    '''logger.info('\nSetting up the evaluation environment against the rules-based agent...')
     # Evaluate against a 'rules' agent as well
     eval_actual_callback = EvalCallback(
       eval_env = selfplay_wrapper(base_env)(opponent_type = 'rules', verbose = args.verbose),
@@ -109,11 +126,11 @@ def main(args):
       render = True,
       verbose = 0
     )
-    callback_args['callback_on_new_best'] = eval_actual_callback
+    callback_args['callback_on_new_best'] = eval_actual_callback'''
     
   # Evaluate the agent against previous versions
-  #eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
-  eval_callback = EvalCallback(**callback_args)
+  eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  #eval_callback = EvalCallback(**callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 
