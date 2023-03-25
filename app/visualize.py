@@ -1,10 +1,3 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
-import tensorflow as tf
-tf.get_logger().setLevel('INFO')
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
 import argparse
 
 from utils.files import load_model
@@ -13,7 +6,7 @@ from utils.register import get_environment
 def main(args):
   env = get_environment(args.env_name)(verbose = args.verbose)
   model = load_model(env, f'{args.model}.zip')
-  params = model.get_parameter_list()
+  params = model.get_parameters()
   print(params)
   for layer in params:
     layer_name = layer[0]
@@ -35,7 +28,7 @@ def cli() -> None:
             , help="Model version")
   parser.add_argument("--verbose", "-v",  action = 'store_true', default = False
             , help="Show observation on debug logging")
-  parser.add_argument("--env_name", "-e",  type = str, default = 'TicTacToe'
+  parser.add_argument("--env_name", "-e",  type = str, default = 'tafl'
             , help="Which game to visualize?")
 
   # Extract args
