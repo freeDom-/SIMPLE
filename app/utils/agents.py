@@ -25,7 +25,6 @@ def action_probability(model, observation):
     dis = model.policy.get_distribution(obs)
     probs = dis.distribution.probs
     probs_np = np.array(probs.tolist())
-    #print(probs_np)
     return probs_np
 
 def predict_values(model, observation):
@@ -45,7 +44,7 @@ class Agent():
         self.logger = logger
 
   def print_top_actions(self, env, action_probs):
-      top5_action_idx = np.argsort(action_probs)[:5]
+      top5_action_idx = np.argsort(action_probs)[::-1][:5]
       top5_actions = action_probs[top5_action_idx]
       try:
         self.logger.debug(f"Top 5 actions: {[str(i) + ' (' + env.parse_action_num(i) + '): ' + str(round(a,2))[:5] for i,a in zip(top5_action_idx, top5_actions)]}")
