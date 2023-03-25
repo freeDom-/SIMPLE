@@ -27,23 +27,6 @@ import config
 from stable_baselines3.common import logger as sb_logger
 logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
-def make_env(env_id, rank, opponent_type, verbose, seed=0):
-    """
-    Utility function for multiprocessed env.
-
-    :param env_id: (str) the environment IDs
-    :param seed: (int) the inital seed for RNG
-    :param rank: (int) index of the subprocess
-    """
-    def _init():
-        base_env = get_environment(env_id)
-        env = selfplay_wrapper(base_env)(opponent_type = opponent_type, verbose = verbose)
-        #env = gym.make(env_id)
-        env.seed(seed + rank)
-        return env
-    set_random_seed(seed)
-    return _init
-
 def main(args):
 
   # Raise exception on fp error to prevent NaN and inf values
@@ -67,13 +50,9 @@ def main(args):
     logger.set_level(config.INFO)
 
   logger.info('\nSetting up the selfplay training environment opponents...')
-  #base_env = get_environment(args.env_name)
-  #env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
-  #env.seed(workerseed)
-  #train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=args.n_envs)
-  #eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=1)
-  train_env = SubprocVecEnv([make_env(args.env_name, i, args.opponent_type, args.verbose) for i in range(args.n_envs)])
-  eval_env = DummyVecEnv([make_env(args.env_name, 0, args.opponent_type, args.verbose)])
+  base_env = get_environment(args.env_name)
+  train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=args.n_envs)
+  eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=1)
 
   params = {'gamma':args.gamma
     , 'n_steps':args.n_steps
@@ -87,7 +66,7 @@ def main(args):
     , 'gae_lambda':args.gae_lambda
     , 'max_grad_norm':args.max_grad_norm
     , 'schedule':'linear'
-    , 'verbose':1
+    , 'verbose':args.verbose
     , 'tensorboard_log':config.LOGDIR
   }
 
@@ -102,15 +81,16 @@ def main(args):
 
   #Callbacks
   logger.info('\nSetting up the selfplay evaluation environment opponents...')
+  eval_freq = max(args.eval_freq // args.n_envs, 1)
   callback_args = {
     'eval_env': eval_env,
     'best_model_save_path' : config.TMPMODELDIR,
     'log_path' : config.LOGDIR,
-    'eval_freq' : args.eval_freq,
+    'eval_freq' : eval_freq,
     'n_eval_episodes' : args.n_eval_episodes,
-    'deterministic' : False,
+    'deterministic' : args.best,
     'render' : True,
-    'verbose' : 0
+    'verbose' : args.verbose
   }
 
   if args.rules:
@@ -129,8 +109,8 @@ def main(args):
     callback_args['callback_on_new_best'] = eval_actual_callback'''
     
   # Evaluate the agent against previous versions
-  eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
-  #eval_callback = EvalCallback(**callback_args)
+  #eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  eval_callback = EvalCallback(**callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 
@@ -161,8 +141,8 @@ def cli() -> None:
   parser.add_argument("--rules", "-ru", action = 'store_true', default = False
               , help="Evaluate on a ruled-based agent")
   parser.add_argument("--best", "-b", action = 'store_true', default = False
-              , help="Uses best moves when evaluating agent against rules-based agent")
-  parser.add_argument("--env_name", "-e", type = str, default = 'tictactoe'
+              , help="Uses best moves when evaluating agent")
+  parser.add_argument("--env_name", "-e", type = str, default = 'tafl'
               , help="Which gym environment to train in: tictactoe, connect4, sushigo, butterfly, geschenkt, frouge, tafl")
   parser.add_argument("--seed", "-s",  type = int, default = 17
             , help="Random seed")
@@ -170,9 +150,9 @@ def cli() -> None:
   parser.add_argument("--n_envs", "-n", type=int, default = 1
             , help="How many environments should be used?")
   parser.add_argument("--eval_freq", "-ef",  type = int, default = 20480
-            , help="How many timesteps should each actor contribute before the agent is evaluated?")
-  parser.add_argument("--n_eval_episodes", "-ne",  type = int, default = 100
-            , help="How many episodes should each actor contribute to the evaluation of the agent?")
+            , help="How many timesteps before the agent is evaluated?")
+  parser.add_argument("--n_eval_episodes", "-ne",  type = int, default = 50
+            , help="How many episodes should be run to test the agent?")
   parser.add_argument("--threshold", "-t",  type = float, default = 0.1
             , help="What score must the agent achieve during evaluation to 'beat' the previous version?")
 

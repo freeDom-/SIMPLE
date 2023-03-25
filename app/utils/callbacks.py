@@ -34,6 +34,7 @@ class SelfPlayCallback(EvalCallback):
       result = super(SelfPlayCallback, self)._on_step() #this will set self.best_mean_reward to the reward from the evaluation as it's previously -np.inf
 
       # TODO: rewrite gathering data from different environments
+      # stable_baselines3.common.evaluation.evaluate_policy(model, env, n_eval_episodes=10, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False, warn=True)
       list_of_rewards = [self.best_mean_reward]
       av_reward = np.mean(list_of_rewards)
       std_reward = np.std(list_of_rewards)
