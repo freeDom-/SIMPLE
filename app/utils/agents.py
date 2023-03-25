@@ -25,7 +25,7 @@ def action_probability(model, observation):
     dis = model.policy.get_distribution(obs)
     probs = dis.distribution.probs
     probs_np = np.array(probs.tolist())
-    return probs_np
+    return probs_np[0]
 
 def predict_values(model, observation):
     obs = model.policy.obs_to_tensor(observation)[0]
@@ -59,7 +59,7 @@ class Agent():
         value = None
       else:
         # TODO: need verification if first item is current action probs
-        action_probs = action_probability(self.model, env.observation)[0]
+        action_probs = action_probability(self.model, env.observation)
         # TODO: need verification if first item of tensor is current value
         value = predict_values(self.model, env.observation)[0][0]
         self.logger.debug(f'Value {value:.2f}')
