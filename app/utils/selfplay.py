@@ -8,20 +8,23 @@ from utils.agents import Agent
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
 def selfplay_wrapper(env):
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
-        def __init__(self, opponent_type, verbose):
+        def __init__(self, opponent_type, verbose, logger = None):
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
             self.opponent_models = load_all_models(self)
             self.best_model_name = get_best_model_name(self.name)
+            if logger is None:
+                self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
+            else:
+                self.logger = logger
 
         def setup_opponents(self):
             if self.opponent_type == 'rules':
-                self.opponent_agent = Agent('rules')
+                self.opponent_agent = Agent('rules', logger = self.logger)
             else:
                 # incremental load of new model
                 best_model_name = get_best_model_name(self.name)
@@ -33,30 +36,30 @@ def selfplay_wrapper(env):
                     start = 0
                     end = len(self.opponent_models) - 1
                     i = random.randint(start, end)
-                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i]) 
+                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i], logger = self.logger) 
 
                 elif self.opponent_type == 'best':
-                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1])  
+                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1], logger = self.logger)  
 
                 elif self.opponent_type == 'mostly_best':
                     j = random.uniform(0,1)
                     if j < 0.8:
-                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1])  
+                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1], logger = self.logger)  
                     else:
                         start = 0
                         end = len(self.opponent_models) - 1
                         i = random.randint(start, end)
-                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i])  
+                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i], logger = self.logger)
 
                 elif self.opponent_type == 'base':
-                    self.opponent_agent = Agent('base', self.opponent_models[0])  
+                    self.opponent_agent = Agent('base', self.opponent_models[0], logger = self.logger)
 
             self.agent_player_num = np.random.choice(self.n_players)
             self.agents = [self.opponent_agent] * self.n_players
             self.agents[self.agent_player_num] = None
             try:
                 #if self.players is defined on the base environment
-                logger.debug(f'Agent plays as Player {self.players[self.agent_player_num].id}')
+                self.logger.debug(f'Agent plays as Player {self.players[self.agent_player_num].id}')
             except:
                 pass
 
@@ -83,8 +86,8 @@ def selfplay_wrapper(env):
                 self.render()
                 action = self.current_agent.choose_action(self, choose_best_action = False, mask_invalid_actions = True)
                 observation, reward, done, _ = super(SelfPlayEnv, self).step(action)
-                logger.debug(f'Rewards: {reward}')
-                logger.debug(f'Done: {done}')
+                self.logger.debug(f'Rewards: {reward}')
+                self.logger.debug(f'Done: {done}')
                 if done:
                     break
 
@@ -94,9 +97,9 @@ def selfplay_wrapper(env):
         def step(self, action):
             self.render()
             observation, reward, done, _ = super(SelfPlayEnv, self).step(action)
-            logger.debug(f'Action played by agent: {action}')
-            logger.debug(f'Rewards: {reward}')
-            logger.debug(f'Done: {done}')
+            self.logger.debug(f'Action played by agent: {action}')
+            self.logger.debug(f'Rewards: {reward}')
+            self.logger.debug(f'Done: {done}')
 
             if not done:
                 package = self.continue_game()
@@ -105,7 +108,7 @@ def selfplay_wrapper(env):
 
 
             agent_reward = reward[self.agent_player_num]
-            logger.debug(f'\nReward To Agent: {agent_reward}')
+            self.logger.debug(f'\nReward To Agent: {agent_reward}')
 
             if done:
                 self.render()

@@ -3,15 +3,10 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
-import tensorflow as tf
-tf.get_logger().setLevel('INFO')
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
 import random
 import argparse
 
-from stable_baselines3 import logger
-from stable_baselines3.common import set_global_seeds
+from stable_baselines3.common.utils import set_random_seed
 
 from utils.files import load_model, write_results
 from utils.register import get_environment
@@ -19,10 +14,10 @@ from utils.agents import Agent
 
 import config
 
+from stable_baselines3.common import logger as sb_logger
+logger = sb_logger.Logger(config.LOGDIR + "/test", ['stdout', 'log'])
 
 def main(args):
-
-  logger.configure(config.LOGDIR + "/test")
 
   if args.debug:
     logger.set_level(config.DEBUG)
@@ -30,15 +25,15 @@ def main(args):
     logger.set_level(config.INFO)
     
   #make environment
-  env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual)
+  env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual, logger = logger)
   env.seed(args.seed)
-  set_global_seeds(args.seed)
+  set_random_seed(args.seed)
 
   total_rewards = {}
 
   if args.recommend:
     ppo_model = load_model(env, 'best_model.zip')
-    ppo_agent = Agent('best_model', ppo_model)
+    ppo_agent = Agent('best_model', ppo_model, logger = logger)
   else:
     ppo_agent = None
 
@@ -51,15 +46,15 @@ def main(args):
 
   for i, agent in enumerate(args.agents):
     if agent == 'human':
-      agent_obj = Agent('human')
+      agent_obj = Agent('human', logger = logger)
     elif agent == 'rules':
-      agent_obj = Agent('rules')
+      agent_obj = Agent('rules', logger = logger)
     elif agent == 'base':
       base_model = load_model(env, 'base.zip')
-      agent_obj = Agent('base', base_model)   
+      agent_obj = Agent('base', base_model, logger = logger)
     else:
       ppo_model = load_model(env, f'{agent}.zip')
-      agent_obj = Agent(agent, ppo_model)
+      agent_obj = Agent(agent, ppo_model, logger = logger)
     agents.append(agent_obj)
     total_rewards[agent_obj.id] = 0
   
@@ -164,7 +159,7 @@ def cli() -> None:
             , help="Make recommendations on humans turns")
   parser.add_argument("--cont", "-c",  action = 'store_true', default = False
             , help="Pause after each turn to wait for user to continue")
-  parser.add_argument("--env_name", "-e",  type = str, default = 'TicTacToe'
+  parser.add_argument("--env_name", "-e",  type = str, default = 'tafl'
             , help="Which game to play?")
   parser.add_argument("--write_results", "-w",  action = 'store_true', default = False
             , help="Write results to a file?")

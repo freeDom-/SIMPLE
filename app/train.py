@@ -25,7 +25,8 @@ from utils.selfplay import selfplay_wrapper
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.configure(config.LOGDIR, ['stdout'])
+logger = sb_logger.Logger(config.LOGDIR, ['stdout', 'log', 'csv'])
+#logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log'])
 
 def main(args):
 
@@ -51,8 +52,8 @@ def main(args):
 
   logger.info('\nSetting up the selfplay training environment opponents...')
   base_env = get_environment(args.env_name)
-  train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=args.n_envs)
-  eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=1)
+  train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose, logger = logger), n_envs=args.n_envs)
+  eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose, logger = logger), n_envs=1)
 
   params = {'gamma':args.gamma
     , 'n_steps':args.n_steps
@@ -84,7 +85,7 @@ def main(args):
   eval_freq = max(args.eval_freq // args.n_envs, 1)
   callback_args = {
     'eval_env': eval_env,
-    'best_model_save_path' : config.TMPMODELDIR,
+    'best_model_save_path' : config.MODELDIR + "/" + args.env_name,
     'log_path' : config.LOGDIR,
     'eval_freq' : eval_freq,
     'n_eval_episodes' : args.n_eval_episodes,

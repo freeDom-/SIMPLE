@@ -6,7 +6,6 @@ import re
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.configure(config.LOGDIR, ['stdout'])
 
 BLACK = "BLACK"
 WHITE = "WHITE"
@@ -115,12 +114,16 @@ class Token():
 class TaflEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, verbose = False, manual = False):
+    def __init__(self, verbose = False, manual = False, logger = None):
         super(TaflEnv, self).__init__()
         self.name = 'tafl'
         self.manual = manual
         self.verbose = verbose
-        
+        if logger is None:
+            self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
+        else:
+            self.logger = logger
+
         self.n_players = 2
 
         self.turns_taken = 0
@@ -517,25 +520,25 @@ class TaflEnv(gym.Env):
         self.current_player_num = 0
         self.turns_taken = 0
         self.done = False
-        logger.debug(f'\n\n---- NEW GAME ----')
+        self.logger.debug(f'\n\n---- NEW GAME ----')
         return self.observation
 
     def render(self, mode='human', close=False):
-        logger.debug('')
+        self.logger.debug('')
         if close:
             return
         if self.done:
-            logger.debug(f'GAME OVER')
+            self.logger.debug(f'GAME OVER')
         else:
-            logger.debug(f"It is {self.current_player.color}'s turn to move")
+            self.logger.debug(f"It is {self.current_player.color}'s turn to move")
         for i in range(0, GRID_SIZE, COLS):
-            logger.debug(str(COLS - i//COLS) + ' ' + ' '.join([self.get_token_representation(x) for x in self.board[i:(i+COLS)]]))
-        logger.debug('  ' + ' '.join([chr(i) for i in range(ord('a'), ord('a') + ROWS)]))
+            self.logger.debug(str(COLS - i//COLS) + ' ' + ' '.join([self.get_token_representation(x) for x in self.board[i:(i+COLS)]]))
+        self.logger.debug('  ' + ' '.join([chr(i) for i in range(ord('a'), ord('a') + ROWS)]))
         if self.verbose:
-            logger.debug(f'\nObservation: \n{self.observation}')
+            self.logger.debug(f'\nObservation: \n{self.observation}')
         if not self.done:
             # TODO: parse legal_actions to readable form (do also for agents recommendations)
-            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+            self.logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
 
 
     def rules_move(self):
