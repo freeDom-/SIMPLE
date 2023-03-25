@@ -6,7 +6,7 @@ RUN apt-get -y install python3-pip
 RUN apt-get -y install htop
 RUN apt-get -y install libpq-dev
 
-RUN apt-get -y install cmake python3-dev zlib1g-dev libgl1-mesa-dev
+RUN apt-get -y install cmake python3-dev zlib1g-dev libgl1-mesa-dev glibc-source
 
 RUN pip3 install --upgrade pip
 

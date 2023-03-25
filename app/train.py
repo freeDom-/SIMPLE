@@ -72,7 +72,7 @@ def main(args):
   #env.seed(workerseed)
   #train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=args.n_envs)
   #eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose), n_envs=1)
-  train_env = DummyVecEnv([make_env(args.env_name, i, args.opponent_type, args.verbose) for i in range(args.n_envs)])
+  train_env = SubprocVecEnv([make_env(args.env_name, i, args.opponent_type, args.verbose) for i in range(args.n_envs)])
   eval_env = DummyVecEnv([make_env(args.env_name, 0, args.opponent_type, args.verbose)])
 
   params = {'gamma':args.gamma
