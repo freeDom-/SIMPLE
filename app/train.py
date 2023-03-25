@@ -25,8 +25,7 @@ from utils.selfplay import selfplay_wrapper
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.Logger(config.LOGDIR, ['stdout', 'log', 'csv'])
-#logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log'])
+logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log', 'csv'])
 
 def main(args):
 

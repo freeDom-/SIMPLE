@@ -1,8 +1,3 @@
-# docker-compose exec app python3 test.py -d -g 1 -a base base human -e butterfly 
-
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
 import random
 import argparse
 
@@ -15,7 +10,7 @@ from utils.agents import Agent
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.Logger(config.LOGDIR + "/test", ['stdout', 'log'])
+logger = sb_logger.configure(config.LOGDIR + '/test', ['stdout', 'log'])
 
 def main(args):
 
