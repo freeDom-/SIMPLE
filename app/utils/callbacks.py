@@ -3,11 +3,47 @@ import numpy as np
 from shutil import copyfile
 
 from stable_baselines3.common import logger
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 
 from utils.files import get_best_model_name, get_model_stats
 
 import config
+
+class NewBestCallback(BaseCallback):
+  def __init__(self, env_name, Üargs, **kwargs):
+    super(NewBestCallback, self).__init__(*args, **kwargs)
+    self.model_dir = os.path.join(config.MODELDIR, env_name)
+    self.generation, self.base_timesteps, pbmr, bmr = get_model_stats(get_best_model_name(env_name))
+
+  def _on_step(self) -> bool:
+    self.generation += 1
+    # TODO: Get rewards from parent EvalCallback - can locals_ be used?
+    self.av_rewards = 0
+    self.av_rules_based_reward = 0
+    logger.info(f"New best model: {self.generation}\n")
+
+    generation_str = str(self.generation).zfill(5)
+    av_rewards_str = str(round(av_reward,3))
+
+    if self.callback is not None:
+      av_rules_based_reward_str = str(round(av_rules_based_reward,3))
+    else:
+      av_rules_based_reward_str = str(0)
+    
+    # TODO: Check if num_timesteps are enough?
+    timesteps = self.base_timesteps + self.num_timesteps
+
+    source_file = os.path.join(config.TMPMODELDIR, f"best_model.zip") # this is constantly being written to - not actually the best model
+    target_file = os.path.join(self.model_dir,  f"_model_{generation_str}_{av_rules_based_reward_str}_{av_rewards_str}_{str(timesteps)}_.zip")
+    copyfile(source_file, target_file)
+    target_file = os.path.join(self.model_dir,  f"best_model.zip")
+    copyfile(source_file, target_file)
+
+    # if playing against a rules based agent, update the global best reward to the improved metric
+    if self.opponent_type == 'rules':
+      self.threshold  = av_reward
+    return True
 
 class SelfPlayCallback(EvalCallback):
   def __init__(self, opponent_type, threshold, env_name, *args, **kwargs):
@@ -33,11 +69,7 @@ class SelfPlayCallback(EvalCallback):
 
       result = super(SelfPlayCallback, self)._on_step() #this will set self.best_mean_reward to the reward from the evaluation as it's previously -np.inf
 
-      # TODO: rewrite gathering data from different environments
-      # stable_baselines3.common.evaluation.evaluate_policy(model, env, n_eval_episodes=10, deterministic=True, render=False, callback=None, reward_threshold=None, return_episode_rewards=False, warn=True)
-      list_of_rewards = [self.best_mean_reward]
-      av_reward = np.mean(list_of_rewards)
-      std_reward = np.std(list_of_rewards)
+      av_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes=self.n_eval_episodes, deterministic=self.deterministic, render=self.render, reward_threshold=self.threshold, warn=self.warn)
       av_timesteps = np.mean([self.num_timesteps])
       total_episodes = np.sum([self.n_eval_episodes])
 
@@ -51,22 +83,21 @@ class SelfPlayCallback(EvalCallback):
       #compare the latest reward against the threshold
       if result and av_reward > self.threshold:
         self.generation += 1
-        if rank == 0: #write new files
-          logger.info(f"New best model: {self.generation}\n")
+        logger.info(f"New best model: {self.generation}\n")
 
-          generation_str = str(self.generation).zfill(5)
-          av_rewards_str = str(round(av_reward,3))
+        generation_str = str(self.generation).zfill(5)
+        av_rewards_str = str(round(av_reward,3))
 
-          if self.callback is not None:
-            av_rules_based_reward_str = str(round(av_rules_based_reward,3))
-          else:
-            av_rules_based_reward_str = str(0)
-          
-          source_file = os.path.join(config.TMPMODELDIR, f"best_model.zip") # this is constantly being written to - not actually the best model
-          target_file = os.path.join(self.model_dir,  f"_model_{generation_str}_{av_rules_based_reward_str}_{av_rewards_str}_{str(self.base_timesteps + self.num_timesteps)}_.zip")
-          copyfile(source_file, target_file)
-          target_file = os.path.join(self.model_dir,  f"best_model.zip")
-          copyfile(source_file, target_file)
+        if self.callback is not None:
+          av_rules_based_reward_str = str(round(av_rules_based_reward,3))
+        else:
+          av_rules_based_reward_str = str(0)
+        
+        source_file = os.path.join(config.TMPMODELDIR, f"best_model.zip") # this is constantly being written to - not actually the best model
+        target_file = os.path.join(self.model_dir,  f"_model_{generation_str}_{av_rules_based_reward_str}_{av_rewards_str}_{str(self.base_timesteps + self.num_timesteps)}_.zip")
+        copyfile(source_file, target_file)
+        target_file = os.path.join(self.model_dir,  f"best_model.zip")
+        copyfile(source_file, target_file)
 
         # if playing against a rules based agent, update the global best reward to the improved metric
         if self.opponent_type == 'rules':

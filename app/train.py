@@ -1,10 +1,6 @@
-# docker-compose exec app python3 train.py -r -e butterfly
-
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
 import numpy as np
 import gym
+import os
 
 import argparse
 import time
@@ -66,7 +62,7 @@ def main(args):
     , 'gae_lambda':args.gae_lambda
     , 'max_grad_norm':args.max_grad_norm
     , 'schedule':'linear'
-    , 'verbose':args.verbose
+    , 'verbose':1
     , 'tensorboard_log':config.LOGDIR
   }
 
@@ -84,13 +80,13 @@ def main(args):
   eval_freq = max(args.eval_freq // args.n_envs, 1)
   callback_args = {
     'eval_env': eval_env,
-    'best_model_save_path' : config.MODELDIR + "/" + args.env_name,
+    'best_model_save_path' : config.TMPMODELDIR,
     'log_path' : config.LOGDIR,
     'eval_freq' : eval_freq,
     'n_eval_episodes' : args.n_eval_episodes,
     'deterministic' : args.best,
     'render' : True,
-    'verbose' : args.verbose
+    'verbose' : 1
   }
 
   if args.rules:
@@ -109,8 +105,8 @@ def main(args):
     callback_args['callback_on_new_best'] = eval_actual_callback'''
     
   # Evaluate the agent against previous versions
-  #eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
-  eval_callback = EvalCallback(**callback_args)
+  eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  #eval_callback = EvalCallback(**callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 

@@ -1,5 +1,6 @@
 import random
 import argparse
+import os
 
 from stable_baselines3.common.utils import set_random_seed
 
@@ -10,7 +11,8 @@ from utils.agents import Agent
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.configure(config.LOGDIR + '/test', ['stdout', 'log'])
+lof_dir = os.path.join(config.LOGDIR, 'test')
+logger = sb_logger.configure(log_dir, ['stdout', 'log'])
 
 def main(args):
 
