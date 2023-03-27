@@ -7,6 +7,8 @@ from torch import nn
 from gym import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.policies import ActorCriticPolicy
+from models.templates.residual import ResidualBlock
+
 
 class CustomCNN(BaseFeaturesExtractor):
     """
@@ -24,19 +26,11 @@ class CustomCNN(BaseFeaturesExtractor):
             nn.Conv2d(n_input_channels, features_dim, 3, padding='same'),
             nn.BatchNorm2d(features_dim), nn.ReLU()
         )
-        self.residual = nn.Sequential(
-            nn.Conv2d(features_dim, features_dim, 3, padding='same'),
-            nn.BatchNorm2d(features_dim), nn.ReLU(),
-            nn.Conv2d(features_dim, features_dim, 3, padding='same'),
-            nn.BatchNorm2d(features_dim)
-        )
-        self.relu = nn.ReLU()
+        self.residual = ResidualBlock(features_dim, features_dim)
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        x = self.convolutional(observations)
-        y = self.residual(x)
-        y = th.add(y, x) # Skip connection of residual layer
-        y = self.relu(y)
+        y = self.convolutional(observations)
+        y = self.residual(y)
         return y
 
 
