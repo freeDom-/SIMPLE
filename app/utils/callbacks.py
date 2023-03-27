@@ -58,7 +58,7 @@ class SelfPlayCallback(EvalCallback):
         else:
           av_rules_based_reward_str = str(0)
         
-        source_file = os.path.join(config.TMPMODELDIR, f"best_model.zip") # this is constantly being written to - not actually the best model
+        source_file = os.path.join(config.TMPMODELDIR, f"best_model.zip") # this is constantly being written to - not actually the best model
         target_file = os.path.join(self.model_dir,  f"_model_{generation_str}_{av_rules_based_reward_str}_{av_rewards_str}_{str(self.base_timesteps + self.num_timesteps)}_.zip")
         copyfile(source_file, target_file)
         target_file = os.path.join(self.model_dir,  f"best_model.zip")

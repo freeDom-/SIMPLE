@@ -11,7 +11,7 @@ from utils.agents import Agent
 import config
 
 from stable_baselines3.common import logger as sb_logger
-lof_dir = os.path.join(config.LOGDIR, 'test')
+log_dir = os.path.join(config.LOGDIR, 'test')
 logger = sb_logger.configure(log_dir, ['stdout', 'log'])
 
 def main(args):
