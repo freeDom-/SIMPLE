@@ -35,7 +35,7 @@ class SelfPlayCallback(EvalCallback):
       result = super(SelfPlayCallback, self)._on_step() #this will set self.best_mean_reward to the reward from the evaluation as it's previously -np.inf
 
       #av_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes=self.n_eval_episodes, deterministic=self.deterministic, render=self.render, warn=self.warn)
-      av_rewad = self.last_mean_reward
+      av_reward = self.last_mean_reward
 
       #av_timesteps = np.mean([self.num_timesteps])
       total_episodes = np.sum([self.n_eval_episodes])

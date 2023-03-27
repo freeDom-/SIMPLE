@@ -56,6 +56,8 @@ def load_model(env, name):
         cont = True
         while cont:
             try:
+                # TODO: Only save model for first environment
+                
                 ppo_model = PPO(policy=get_network_arch(env.name), env=env,
                                 policy_kwargs=get_policy_kwargs(env.name))
                 logger.info(f'Saving base.zip PPO model...')
