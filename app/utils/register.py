@@ -59,7 +59,12 @@ def get_network_arch(env_name):
         raise Exception(f'No model architectures found for {env_name}')
 
 def get_policy_kwargs(env_name):
-    if env_name in ('tafl'):
+    if env_name in ('tictactoe'):
+        from models.tictactoe.models import CustomCNN
+        return dict(
+            features_extractor_class=CustomCNN,
+        )
+    elif env_name in ('tafl'):
         from models.tafl.models import CustomCNN, FILTERS
         return dict(
             features_extractor_class=CustomCNN,

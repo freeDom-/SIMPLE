@@ -5,7 +5,7 @@ import numpy as np
 
 import config
 
-from stable_baselines3 import logger
+from stable_baselines3.common import logger as sb_logger
 
 
 class Player():
@@ -25,11 +25,15 @@ class Token():
 class TicTacToeEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, verbose = False, manual = False):
+    def __init__(self, verbose = False, manual = False, logger = None):
         super(TicTacToeEnv, self).__init__()
         self.name = 'tictactoe'
         self.manual = manual
-        
+        if logger is None:
+            self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
+        else:
+            self.logger = logger
+
         self.grid_length = 3
         self.n_players = 2
         self.num_squares = self.grid_length * self.grid_length
@@ -86,7 +90,7 @@ class TicTacToeEnv(gym.Env):
                 return  1, True
 
         if self.turns_taken == self.num_squares:
-            logger.debug("Board full")
+            self.logger.debug("Board full")
             return  0, True
 
         return 0, False
@@ -127,28 +131,28 @@ class TicTacToeEnv(gym.Env):
         self.current_player_num = 0
         self.turns_taken = 0
         self.done = False
-        logger.debug(f'\n\n---- NEW GAME ----')
+        self.logger.debug(f'\n\n---- NEW GAME ----')
         return self.observation
 
 
     def render(self, mode='human', close=False, verbose = True):
-        logger.debug('')
+        self.logger.debug('')
         if close:
             return
         if self.done:
-            logger.debug(f'GAME OVER')
+            self.logger.debug(f'GAME OVER')
         else:
-            logger.debug(f"It is Player {self.current_player.id}'s turn to move")
+            self.logger.debug(f"It is Player {self.current_player.id}'s turn to move")
             
-        logger.debug(' '.join([x.symbol for x in self.board[:self.grid_length]]))
-        logger.debug(' '.join([x.symbol for x in self.board[self.grid_length:self.grid_length*2]]))
-        logger.debug(' '.join([x.symbol for x in self.board[(self.grid_length*2):(self.grid_length*3)]]))
+        self.logger.debug(' '.join([x.symbol for x in self.board[:self.grid_length]]))
+        self.logger.debug(' '.join([x.symbol for x in self.board[self.grid_length:self.grid_length*2]]))
+        self.logger.debug(' '.join([x.symbol for x in self.board[(self.grid_length*2):(self.grid_length*3)]]))
 
         if self.verbose:
-            logger.debug(f'\nObservation: \n{self.observation}')
+            self.logger.debug(f'\nObservation: \n{self.observation}')
         
         if not self.done:
-            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+            self.logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
 
 
     def rules_move(self):
@@ -160,17 +164,17 @@ class TicTacToeEnv(gym.Env):
         # Check computer win moves
         for i in range(0, self.num_squares):
             if b[i] == 0 and testWinMove(b, 1, i):
-                logger.debug('Winning move')
+                self.logger.debug('Winning move')
                 return self.create_action_probs(i)
         # Check player win moves
         for i in range(0, self.num_squares):
             if b[i] == 0 and testWinMove(b, -1, i):
-                logger.debug('Block move')
+                self.logger.debug('Block move')
                 return self.create_action_probs(i)
         # Check computer fork opportunities
         for i in range(0, self.num_squares):
             if b[i] == 0 and testForkMove(b, 1, i):
-                logger.debug('Create Fork')
+                self.logger.debug('Create Fork')
                 return self.create_action_probs(i)
         # Check player fork opportunities, incl. two forks
         playerForks = 0
@@ -179,26 +183,26 @@ class TicTacToeEnv(gym.Env):
                 playerForks += 1
                 tempMove = i
         if playerForks == 1:
-            logger.debug('Block One Fork')
+            self.logger.debug('Block One Fork')
             return self.create_action_probs(tempMove)
         elif playerForks == 2:
             for j in [1, 3, 5, 7]:
                 if b[j] == 0:
-                    logger.debug('Block 2 Forks')
+                    self.logger.debug('Block 2 Forks')
                     return self.create_action_probs(j)
         # Play center
         if b[4] == 0:
-            logger.debug('Play Centre')
+            self.logger.debug('Play Centre')
             return self.create_action_probs(4)
         # Play a corner
         for i in [0, 2, 6, 8]:
             if b[i] == 0:
-                logger.debug('Play Corner')
+                self.logger.debug('Play Corner')
                 return self.create_action_probs(i)
         #Play a side
         for i in [1, 3, 5, 7]:
             if b[i] == 0:
-                logger.debug('Play Side')
+                self.logger.debug('Play Side')
                 return self.create_action_probs(i)
 
 
