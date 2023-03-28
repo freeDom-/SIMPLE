@@ -58,9 +58,7 @@ class Agent():
         action_probs = np.array(env.rules_move())
         value = None
       else:
-        # TODO: need verification if first item is current action probs
         action_probs = action_probability(self.model, env.observation)
-        # TODO: need verification if first item of tensor is current value
         value = predict_values(self.model, env.observation)[0][0]
         self.logger.debug(f'Value {value:.2f}')
 

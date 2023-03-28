@@ -109,7 +109,7 @@ def main(args):
     
   # Evaluate the agent against previous versions
   if args.mask_invalid_actions:
-    eval_callback = MaskableSelfPlayCallback(args.opponent_type, args.threshold, args.env_name, use_masking=True **callback_args)
+    eval_callback = MaskableSelfPlayCallback(args.opponent_type, args.threshold, args.env_name, use_masking=True, **callback_args)
   else:
     eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
 
