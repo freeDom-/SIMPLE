@@ -21,7 +21,7 @@ from utils.selfplay import selfplay_wrapper
 import config
 
 from stable_baselines3.common import logger as sb_logger
-logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log', 'csv'])
+logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log'])
 
 def main(args):
 
@@ -35,7 +35,7 @@ def main(args):
     os.makedirs(model_dir)
   except:
     pass
-  reset_logs(model_dir)
+  reset_logs()
   if args.reset:
     reset_models(model_dir)
 

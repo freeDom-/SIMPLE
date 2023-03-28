@@ -57,7 +57,7 @@ def load_model(env, name):
         while cont:
             try:
                 # TODO: Only save model for first environment
-                
+
                 ppo_model = PPO(policy=get_network_arch(env.name), env=env,
                                 policy_kwargs=get_policy_kwargs(env.name))
                 logger.info(f'Saving base.zip PPO model...')
@@ -114,7 +114,7 @@ def get_model_stats(filename):
     return generation, timesteps, best_rules_based, best_reward
 
 
-def reset_logs(model_dir):
+def reset_logs():
     try:
         filelist = [ f for f in os.listdir(config.LOGDIR) if f not in ['.gitignore']]
         for f in filelist:
