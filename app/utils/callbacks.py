@@ -3,14 +3,13 @@ import numpy as np
 from shutil import copyfile
 
 from stable_baselines3.common import logger
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
+from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 
 from utils.files import get_best_model_name, get_model_stats
 
 import config
 
-class SelfPlayCallback(EvalCallback):
+class SelfPlayCallback(MaskableEvalCallback):
   def __init__(self, opponent_type, threshold, env_name, *args, **kwargs):
     super(SelfPlayCallback, self).__init__(*args, **kwargs)
     self.opponent_type = opponent_type
@@ -34,17 +33,13 @@ class SelfPlayCallback(EvalCallback):
 
       result = super(SelfPlayCallback, self)._on_step() #this will set self.best_mean_reward to the reward from the evaluation as it's previously -np.inf
 
-      #av_reward, std_reward = evaluate_policy(self.model, self.eval_env, n_eval_episodes=self.n_eval_episodes, deterministic=self.deterministic, render=self.render, warn=self.warn)
       av_reward = self.last_mean_reward
-
-      #av_timesteps = np.mean([self.num_timesteps])
       total_episodes = np.sum([self.n_eval_episodes])
 
       if self.callback is not None:
         rules_based_rewards = [self.callback.best_mean_reward]
         av_rules_based_reward = np.mean(rules_based_rewards)
 
-      #self.logger.info("Eval num_timesteps={}, episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, av_reward, std_reward))
       self.logger.info("Total episodes ran={}".format(total_episodes))
 
       #compare the latest reward against the threshold
