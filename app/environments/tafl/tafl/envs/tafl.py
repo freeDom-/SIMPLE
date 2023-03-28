@@ -209,6 +209,9 @@ class TaflEnv(gym.Env):
                 legal_actions[action_num] = legal
         return legal_actions
 
+    def action_masks(self):
+        return np.array(self.legal_actions, dtype=bool)
+
     def parse_action(self, action):
         if type(action) is not str:
             raise TypeError("action is not of type string")

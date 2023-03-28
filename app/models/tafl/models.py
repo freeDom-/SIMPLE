@@ -7,6 +7,7 @@ from torch import nn
 from gym import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.policies import ActorCriticPolicy
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 
 ROWS = 7
 COLS = 7
@@ -130,7 +131,7 @@ class CustomNetwork(nn.Module):
         return self.value_net(features)
 
 
-class CustomPolicy(ActorCriticPolicy):
+class CustomPolicy(MaskableActorCriticPolicy):
     def __init__(self,
                 observation_space: spaces.Space,
                 action_space: spaces.Space,
