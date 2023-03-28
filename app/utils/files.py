@@ -7,6 +7,7 @@ import numpy as np
 
 from shutil import rmtree
 from sb3_contrib import MaskablePPO
+from stable_baselines3 import PPO
 from stable_baselines3.common import logger as sb_logger
 from stable_baselines3.common.env_util import make_vec_env
 
@@ -46,7 +47,10 @@ def load_model(env, name):
         while cont:
             try:
                 env = make_vec_env(lambda :env, n_envs=1)
-                ppo_model = MaskablePPO.load(filename, env=env)
+                try:
+                    ppo_model = MaskablePPO.load(filename, env=env)
+                except ValueError:
+                    ppo_model = PPO.load(filename, env=env)
                 cont = False
             except Exception as e:
                 time.sleep(5)
@@ -57,9 +61,12 @@ def load_model(env, name):
         while cont:
             try:
                 # TODO: Only save model for first environment
-
-                ppo_model = MaskablePPO(policy=get_network_arch(env.name), env=env,
-                                policy_kwargs=get_policy_kwargs(env.name))
+                try:
+                    ppo_model = MaskablePPO(policy=get_network_arch(env.name), env=env,
+                                            policy_kwargs=get_policy_kwargs(env.name))
+                except ValueError:
+                    ppo_model = PPO(policy=get_network_arch(env.name), env=env,
+                                    policy_kwargs=get_policy_kwargs(env.name))
                 logger.info(f'Saving base.zip PPO model...')
                 ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
                 

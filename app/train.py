@@ -6,16 +6,14 @@ import argparse
 import time
 from shutil import copyfile
 
+from stable_baselines3 import PPO
 from sb3_contrib import MaskablePPO
-
-from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecCheckNan, VecNormalize
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 
-from utils.callbacks import SelfPlayCallback
+from utils.callbacks import SelfPlayCallback, MaskableSelfPlayCallback
 from utils.files import reset_logs, reset_models
-from utils.register import get_network_arch, get_environment
+from utils.register import get_environment
 from utils.selfplay import selfplay_wrapper
 
 import config
@@ -68,12 +66,17 @@ def main(args):
 
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
 
+  if args.mask_invalid_actions:
+    ppo = MaskablePPO
+  else:
+    ppo = PPO
+
   if args.reset or not os.path.exists(os.path.join(model_dir, 'best_model.zip')):
     logger.info('\nLoading the base PPO agent to train...')
-    model = MaskablePPO.load(os.path.join(model_dir, 'base.zip'), train_env, **params)
+    model = ppo.load(os.path.join(model_dir, 'base.zip'), train_env, **params)
   else:
     logger.info('\nLoading the best_model.zip PPO agent to continue training...')
-    model = MaskablePPO.load(os.path.join(model_dir, 'best_model.zip'), train_env, **params)
+    model = ppo.load(os.path.join(model_dir, 'best_model.zip'), train_env, **params)
 
   #Callbacks
   logger.info('\nSetting up the selfplay evaluation environment opponents...')
@@ -105,7 +108,10 @@ def main(args):
     callback_args['callback_on_new_best'] = eval_actual_callback'''
     
   # Evaluate the agent against previous versions
-  eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, use_masking=True, **callback_args)
+  if args.mask_invalid_actions:
+    eval_callback = MaskableSelfPlayCallback(args.opponent_type, args.threshold, args.env_name, use_masking=True **callback_args)
+  else:
+    eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 
@@ -140,7 +146,9 @@ def cli() -> None:
   parser.add_argument("--env_name", "-e", type = str, default = 'tafl'
               , help="Which gym environment to train in: tictactoe, connect4, sushigo, butterfly, geschenkt, frouge, tafl")
   parser.add_argument("--seed", "-s",  type = int, default = 17
-            , help="Random seed")
+              , help="Random seed")
+  parser.add_argument("--mask_invalid_actions", "-m", action = 'store_true', default = False
+              , help="Use invalid action masking. Environment needs to implement action_masks method, which returns a boolean array containing the action mask (True means valid action)")
 
   parser.add_argument("--n_envs", "-n", type=int, default = 1
             , help="How many environments should be used?")
