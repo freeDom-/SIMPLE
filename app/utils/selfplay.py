@@ -2,7 +2,7 @@ import os
 import numpy as np
 import random
 
-from utils.files import load_model, load_all_models, get_best_model_name
+from utils.files import load_model, load_models, load_all_models, get_best_model_name
 from utils.agents import Agent
 
 import config
@@ -12,10 +12,11 @@ from stable_baselines3.common import logger as sb_logger
 def selfplay_wrapper(env):
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
-        def __init__(self, opponent_type, verbose, logger = None):
+        def __init__(self, opponent_type, verbose, max_opponents = 0, logger = None):
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
-            self.opponent_models = load_all_models(self)
+            self.max_opponents = max_opponents
+            self.opponent_models = load_models(self, max_opponents)
             self.best_model_name = get_best_model_name(self.name)
             if logger is None:
                 self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
