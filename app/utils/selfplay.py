@@ -12,7 +12,7 @@ from stable_baselines3.common import logger as sb_logger
 def selfplay_wrapper(env):
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
-        def __init__(self, opponent_type, verbose, max_opponents = 0, logger = None):
+        def __init__(self, opponent_type, verbose, max_opponents = -1, logger = None):
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
             self.max_opponents = max_opponents
