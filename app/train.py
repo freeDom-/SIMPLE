@@ -8,10 +8,13 @@ from shutil import copyfile
 
 from stable_baselines3 import PPO
 from sb3_contrib import MaskablePPO
+from stable_baselines3.common.callbacks import EvalCallback
+from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
+
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 
-from utils.callbacks import SelfPlayCallback, MaskableSelfPlayCallback
+from utils.callbacks import callback_wrapper
 from utils.files import reset_logs, reset_models
 from utils.register import get_environment
 from utils.selfplay import selfplay_wrapper
@@ -67,8 +70,10 @@ def main(args):
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
 
   if args.mask_invalid_actions:
+    base_callback = MaskableEvalCallback
     ppo = MaskablePPO
   else:
+    base_callback = EvalCallback
     ppo = PPO
 
   if args.reset or not os.path.exists(os.path.join(model_dir, 'best_model.zip')):
@@ -91,6 +96,8 @@ def main(args):
     'render' : True,
     'verbose' : 1
   }
+  if args.mask_invalid_actions:
+    callback_args['use_masking'] = True
 
   if args.rules:
     logger.error('\nRule-based agent is currently not supported...')
@@ -108,10 +115,7 @@ def main(args):
     callback_args['callback_on_new_best'] = eval_actual_callback'''
     
   # Evaluate the agent against previous versions
-  if args.mask_invalid_actions:
-    eval_callback = MaskableSelfPlayCallback(args.opponent_type, args.threshold, args.env_name, use_masking=True, **callback_args)
-  else:
-    eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
+  eval_callback = callback_wrapper(base_callback)(args.opponent_type, args.threshold, args.env_name, **callback_args)
 
   logger.info('\nSetup complete - commencing learning...\n')
 
