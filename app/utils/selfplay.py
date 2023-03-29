@@ -9,51 +9,69 @@ import config
 
 from stable_baselines3.common import logger as sb_logger
 
+# TODO: make shared variables thread safe for SubprocVecEnv
+opponent_models = []
+max_opponents = -1
+use_most_recent_opponents = False
+best_model_name = ""
+
 def selfplay_wrapper(env):
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
-        def __init__(self, opponent_type, verbose, max_opponents = -1, logger = None):
+        def __init__(self, opponent_type, verbose, logger = None):
+            global opponent_models, max_opponents, best_model_name, use_most_recent_opponents
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
-            self.max_opponents = max_opponents
-            self.opponent_models = load_models(self, max_opponents)
-            self.best_model_name = get_best_model_name(self.name)
+            if not opponent_models:
+                opponent_models = load_models(self, max_opponents)
+            best_model_name = get_best_model_name(self.name)
             if logger is None:
                 self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
             else:
                 self.logger = logger
 
         def setup_opponents(self):
+            global opponent_models, max_opponents, best_model_name, use_most_recent_opponents
             if self.opponent_type == 'rules':
                 self.opponent_agent = Agent('rules', logger = self.logger)
             else:
                 # incremental load of new model
-                best_model_name = get_best_model_name(self.name)
-                if self.best_model_name != best_model_name:
-                    self.opponent_models.append(load_model(self, best_model_name ))
-                    self.best_model_name = best_model_name
+                current_best_model_name = get_best_model_name(self.name)
+                if current_best_model_name != best_model_name:
+                    if max_opponents == -1 or (opponent_models.len() - 2) < max_opponents:
+                        if use_most_recent_opponents:
+                            # Delete oldes model
+                            del opponent_models[1]
+                        else:
+                            # Delete a random model except base and last model
+                            idx = random.randint(1, opponent_models.len() - 2)
+                            del opponent_models[idx]
+                        opponent_models.append(load_model(self, best_model_name ))
+                    else:
+                        opponent_models = load_models(max_opponents)
+                    best_model_name = current_best_model_name
 
                 if self.opponent_type == 'random':
                     start = 0
-                    end = len(self.opponent_models) - 1
+                    end = len(opponent_models) - 1
                     i = random.randint(start, end)
-                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i], logger = self.logger) 
+                    self.opponent_agent = Agent('ppo_opponent', opponent_models[i], logger = self.logger) 
 
                 elif self.opponent_type == 'best':
-                    self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1], logger = self.logger)  
+                    self.opponent_agent = Agent('ppo_opponent', opponent_models[-1], logger = self.logger)  
 
                 elif self.opponent_type == 'mostly_best':
                     j = random.uniform(0,1)
                     if j < 0.8:
-                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[-1], logger = self.logger)  
+                        self.opponent_agent = Agent('ppo_opponent', opponent_models[-1], logger = self.logger)  
                     else:
                         start = 0
-                        end = len(self.opponent_models) - 1
+                        end = len(opponent_models) - 1
                         i = random.randint(start, end)
-                        self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i], logger = self.logger)
+                        self.opponent_agent = Agent('ppo_opponent', opponent_models[i], logger = self.logger)
 
                 elif self.opponent_type == 'base':
-                    self.opponent_agent = Agent('base', self.opponent_models[0], logger = self.logger)
+                    self.opponent_agent = Agent('base', opponent_models[0], logger = self.logger)
 
             self.agent_player_num = np.random.choice(self.n_players)
             self.agents = [self.opponent_agent] * self.n_players

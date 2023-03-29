@@ -39,13 +39,14 @@ def write_results(players, game, games, episode_length):
 
 
 def load_model(env, name):
-
     filename = os.path.join(config.MODELDIR, env.name, name)
+    # TODO: make loading threadsafe for use with SubprocVecEnv
     if os.path.exists(filename):
         logger.info(f'Loading {name}')
         cont = True
         while cont:
             try:
+                # wrap env with DummyVecEnv and Monitor wrapper
                 env = make_vec_env(lambda :env, n_envs=1)
                 try:
                     ppo_model = MaskablePPO.load(filename, env=env)
@@ -60,19 +61,15 @@ def load_model(env, name):
         cont = True
         while cont:
             try:
-                # TODO: Only save model for first environment
                 try:
                     ppo_model = MaskablePPO(policy=get_network_arch(env.name), env=env,
                                             policy_kwargs=get_policy_kwargs(env.name))
                 except ValueError:
                     ppo_model = PPO(policy=get_network_arch(env.name), env=env,
                                     policy_kwargs=get_policy_kwargs(env.name))
+                
                 logger.info(f'Saving base.zip PPO model...')
                 ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
-                
-                # TODO: Load model when running multi environments
-                #ppo_model = MaskablePPO.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
-
                 cont = False
             except IOError as e:
                 sys.exit(f'Check zoo/{env.name}/ exists and read/write permission granted to user')
@@ -112,7 +109,7 @@ def load_models(env, n, load_most_recent = False):
     models = [load_model(env, 'base.zip')]
 
     n = min(n, modellist.len())
-    samples = if load_most_recent modellist[:n] else random.sample(modellist, n)
+    samples = modellist[:n] if load_most_recent else random.sample(modellist, n)
     for model_name in samples:
         models.append(load_model(env, model_name))
 
