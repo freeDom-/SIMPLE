@@ -104,9 +104,13 @@ def load_models(env, n, load_most_recent = False):
 
     modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env.name)) if f.startswith("_model")]
     modellist.sort(reverse=True)
-    best_model = modellist.pop()
-
+    
     models = [load_model(env, 'base.zip')]
+
+    if not len(modellist):
+        return models
+
+    best_model = modellist.pop()
 
     n = min(n, len(modellist))
     samples = modellist[:n] if load_most_recent else random.sample(modellist, n)

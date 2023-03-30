@@ -20,6 +20,7 @@ from utils.register import get_environment
 from utils.selfplay import selfplay_wrapper
 
 import config
+import utils.selfplay as selfplay
 
 from stable_baselines3.common import logger as sb_logger
 logger = sb_logger.configure(config.LOGDIR, ['stdout', 'log'])
@@ -48,6 +49,7 @@ def main(args):
 
   logger.info('\nSetting up the selfplay training environment opponents...')
   base_env = get_environment(args.env_name)
+  selfplay.max_opponent_models = args.max_opponent_models
   train_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose, logger = logger), n_envs=args.n_envs)
   eval_env = make_vec_env(lambda: selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose, logger = logger), n_envs=1)
 
@@ -153,6 +155,8 @@ def cli() -> None:
               , help="Random seed")
   parser.add_argument("--mask_invalid_actions", "-m", action = 'store_true', default = False
               , help="Use invalid action masking. Environment needs to implement action_masks method, which returns a boolean array containing the action mask (True means valid action)")
+  parser.add_argument("--max_opponent_models", "-max", type = int, default = -1
+              , help="Limit max opponent models saved in memory to prevent out of memory exceptions for big models. -1 means no limit.")
 
   parser.add_argument("--n_envs", "-n", type=int, default = 1
             , help="How many environments should be used?")

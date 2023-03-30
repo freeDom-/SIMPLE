@@ -11,7 +11,7 @@ from stable_baselines3.common import logger as sb_logger
 
 # TODO: make shared variables thread safe for SubprocVecEnv
 opponent_models = []
-max_opponents = -1
+max_opponent_models = -1
 use_most_recent_opponents = False
 best_model_name = ""
 
@@ -19,11 +19,11 @@ def selfplay_wrapper(env):
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
         def __init__(self, opponent_type, verbose, logger = None):
-            global opponent_models, max_opponents, best_model_name, use_most_recent_opponents
+            global opponent_models, max_opponent_models, best_model_name, use_most_recent_opponents
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
             if not opponent_models:
-                opponent_models = load_models(self, max_opponents)
+                opponent_models = load_models(self, max_opponent_models)
             best_model_name = get_best_model_name(self.name)
             if logger is None:
                 self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
@@ -31,14 +31,14 @@ def selfplay_wrapper(env):
                 self.logger = logger
 
         def setup_opponents(self):
-            global opponent_models, max_opponents, best_model_name, use_most_recent_opponents
+            global opponent_models, max_opponent_models, best_model_name, use_most_recent_opponents
             if self.opponent_type == 'rules':
                 self.opponent_agent = Agent('rules', logger = self.logger)
             else:
                 # incremental load of new model
                 current_best_model_name = get_best_model_name(self.name)
                 if current_best_model_name != best_model_name:
-                    if max_opponents == -1 or (len(opponent_models) - 2) < max_opponents:
+                    if max_opponent_models == -1 or (len(opponent_models) - 2) < max_opponent_models:
                         if use_most_recent_opponents:
                             # Delete oldes model
                             del opponent_models[1]
@@ -48,7 +48,7 @@ def selfplay_wrapper(env):
                             del opponent_models[idx]
                         opponent_models.append(load_model(self, current_best_model_name))
                     else:
-                        opponent_models = load_models(max_opponents)
+                        opponent_models = load_models(max_opponent_models)
                     best_model_name = current_best_model_name
 
                 if self.opponent_type == 'random':
