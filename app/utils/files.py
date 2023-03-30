@@ -108,7 +108,7 @@ def load_models(env, n, load_most_recent = False):
 
     models = [load_model(env, 'base.zip')]
 
-    n = min(n, modellist.len())
+    n = min(n, len(modellist))
     samples = modellist[:n] if load_most_recent else random.sample(modellist, n)
     for model_name in samples:
         models.append(load_model(env, model_name))
