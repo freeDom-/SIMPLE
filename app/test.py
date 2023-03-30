@@ -156,7 +156,7 @@ def cli() -> None:
             , help="Make recommendations on humans turns")
   parser.add_argument("--cont", "-c",  action = 'store_true', default = False
             , help="Pause after each turn to wait for user to continue")
-  parser.add_argument("--env_name", "-e",  type = str, default = 'tafl'
+  parser.add_argument("--env_name", "-e",  type = str, default = 'tictactoe'
             , help="Which game to play?")
   parser.add_argument("--write_results", "-w",  action = 'store_true', default = False
             , help="Write results to a file?")

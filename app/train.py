@@ -147,7 +147,7 @@ def cli() -> None:
               , help="Evaluate on a ruled-based agent")
   parser.add_argument("--best", "-b", action = 'store_true', default = False
               , help="Uses best moves when evaluating agent")
-  parser.add_argument("--env_name", "-e", type = str, default = 'tafl'
+  parser.add_argument("--env_name", "-e", type = str, default = 'tictactoe'
               , help="Which gym environment to train in: tictactoe, connect4, sushigo, butterfly, geschenkt, frouge, tafl")
   parser.add_argument("--seed", "-s",  type = int, default = 17
               , help="Random seed")
