@@ -46,7 +46,7 @@ def selfplay_wrapper(env):
                             # Delete a random model except base and last model
                             idx = random.randint(1, len(opponent_models) - 2)
                             del opponent_models[idx]
-                        opponent_models.append(load_model(self, best_model_name ))
+                        opponent_models.append(load_model(self, current_best_model_name))
                     else:
                         opponent_models = load_models(max_opponents)
                     best_model_name = current_best_model_name
