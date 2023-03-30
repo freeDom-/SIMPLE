@@ -38,17 +38,11 @@ def selfplay_wrapper(env):
                 # incremental load of new model
                 current_best_model_name = get_best_model_name(self.name)
                 if current_best_model_name != best_model_name:
-                    if max_opponent_models == -1 or (len(opponent_models) - 2) < max_opponent_models:
-                        if use_most_recent_opponents:
-                            # Delete oldes model
-                            del opponent_models[1]
-                        else:
-                            # Delete a random model except base and last model
-                            idx = random.randint(1, len(opponent_models) - 2)
-                            del opponent_models[idx]
-                        opponent_models.append(load_model(self, current_best_model_name))
-                    else:
-                        opponent_models = load_models(max_opponent_models)
+                    if max_opponent_models != -1 and len(opponent_models) > max_opponent_models:  
+                        # Delete oldest or random model (except base and latest)
+                        idx = 1 if use_most_recent_opponents else random.randint(1, len(opponent_models) - 2)
+                        del opponent_models[idx]
+                    opponent_models.append(load_model(self, current_best_model_name))
                     best_model_name = current_best_model_name
 
                 if self.opponent_type == 'random':
