@@ -104,12 +104,12 @@ def load_models(env, n, load_most_recent = False):
     if len(modellist) < max(n, 3):
         return load_all_models(env)
     
-    modellist.sort(reverse=True)
+    modellist.sort()
     models = [load_model(env, 'base.zip')]
     best_model = modellist.pop()
 
     n = min(n - 2, len(modellist))
-    samples = modellist[:n] if load_most_recent else random.sample(modellist, n)
+    samples = modellist[-n:] if load_most_recent else random.sample(modellist, n)
     for model_name in samples:
         models.append(load_model(env, model_name))
 
@@ -127,6 +127,11 @@ def get_best_model_name(env_name):
         
     return filename
 
+def get_filename_by_num_timesteps(env, timesteps):
+    modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env.name)) if f.startswith("_model") and str(timesteps) in f]
+    filename = modellist[0] if modellist else ""
+    return filename
+
 def get_model_stats(filename):
     if filename is None:
         generation = 0
@@ -140,7 +145,6 @@ def get_model_stats(filename):
         best_reward = float(stats[4])
         timesteps = int(stats[5])
     return generation, timesteps, best_rules_based, best_reward
-
 
 def reset_logs():
     try:

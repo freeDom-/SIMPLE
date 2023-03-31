@@ -2,7 +2,7 @@ import os
 import numpy as np
 import random
 
-from utils.files import load_model, load_models, load_all_models, get_best_model_name
+from utils.files import load_model, load_models, load_all_models, get_best_model_name, get_filename_by_num_timesteps
 from utils.agents import Agent
 
 import config
@@ -38,10 +38,12 @@ def selfplay_wrapper(env):
                 # incremental load of new model
                 current_best_model_name = get_best_model_name(self.name)
                 if current_best_model_name != best_model_name:
+                    self.logger.info(f'Number of models load: {len(opponent_models)}')
                     if len(opponent_models) >= max(max_opponent_models, 3):
                         # Delete oldest or random model (except base and latest)
                         idx = 1 if use_most_recent_opponents else random.randint(1, len(opponent_models) - 2)
-                        self.logger.info(f'Unloading {opponent_models[idx]}')
+                        filename = get_filename_by_num_timesteps(self, opponent_models[idx].num_timesteps)
+                        self.logger.info(f'Unloading {filename}')
                         del opponent_models[idx]
                     opponent_models.append(load_model(self, current_best_model_name))
                     best_model_name = current_best_model_name
