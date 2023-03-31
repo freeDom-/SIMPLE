@@ -155,7 +155,7 @@ def cli() -> None:
               , help="Random seed")
   parser.add_argument("--mask_invalid_actions", "-m", action = 'store_true', default = False
               , help="Use invalid action masking. Environment needs to implement action_masks method, which returns a boolean array containing the action mask (True means valid action)")
-  parser.add_argument("--max_opponent_models", "-max", type = int, default = -1
+  parser.add_argument("--max_opponent_models", "-max", type = int, default = 1000000
               , help="Limit max opponent models saved in memory to prevent out of memory exceptions for big models. -1 means no limit.")
 
   parser.add_argument("--n_envs", "-n", type=int, default = 1

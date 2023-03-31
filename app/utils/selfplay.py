@@ -11,7 +11,7 @@ from stable_baselines3.common import logger as sb_logger
 
 # TODO: make shared variables thread safe for SubprocVecEnv
 opponent_models = []
-max_opponent_models = -1
+max_opponent_models = 1000000
 use_most_recent_opponents = False
 best_model_name = ""
 
@@ -23,7 +23,7 @@ def selfplay_wrapper(env):
             super(SelfPlayEnv, self).__init__(verbose)
             self.opponent_type = opponent_type
             if not opponent_models:
-                opponent_models = load_models(self, max_opponent_models)
+                opponent_models = load_models(self, max_opponent_models, use_most_recent_opponents)
             best_model_name = get_best_model_name(self.name)
             if logger is None:
                 self.logger = sb_logger.make_output_format('stdout', config.LOGDIR, log_suffix='')
@@ -38,9 +38,10 @@ def selfplay_wrapper(env):
                 # incremental load of new model
                 current_best_model_name = get_best_model_name(self.name)
                 if current_best_model_name != best_model_name:
-                    if max_opponent_models != -1 and len(opponent_models) > max_opponent_models:  
+                    if len(opponent_models) >= max(max_opponent_models, 3):
                         # Delete oldest or random model (except base and latest)
                         idx = 1 if use_most_recent_opponents else random.randint(1, len(opponent_models) - 2)
+                        self.logger.info(f'Unloading {opponent_models[idx]}')
                         del opponent_models[idx]
                     opponent_models.append(load_model(self, current_best_model_name))
                     best_model_name = current_best_model_name

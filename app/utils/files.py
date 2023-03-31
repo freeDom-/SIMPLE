@@ -93,26 +93,22 @@ def load_all_models(env):
 
 def load_models(env, n, load_most_recent = False):
     """
-    Load max n models in addition to base and best model.
+    Load max n models.
 
-    :param n: Number of models to load. Loads all models if n is -1.
+    :param n: Number of models to load.
     :param load_most_recent: Whether to load the most recent models instead. Load random models if false.
     :return: Load models
     """
-    if n == -1:
-        return load_all_models(env)
-
-    modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env.name)) if f.startswith("_model")]
-    modellist.sort(reverse=True)
     
+    modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env.name)) if f.startswith("_model")]
+    if len(modellist) < max(n, 3):
+        return load_all_models(env)
+    
+    modellist.sort(reverse=True)
     models = [load_model(env, 'base.zip')]
-
-    if not len(modellist):
-        return models
-
     best_model = modellist.pop()
 
-    n = min(n, len(modellist))
+    n = min(n - 2, len(modellist))
     samples = modellist[:n] if load_most_recent else random.sample(modellist, n)
     for model_name in samples:
         models.append(load_model(env, model_name))
