@@ -178,6 +178,9 @@ class TaflEnv(gym.Env):
                 out.append(repeated_once)
                 out.append(repeated_twice)
 
+        # TODO: add a layer with hostile pieces (corner & throne)
+        # TODO: add a layer with corners (escape fields)        
+
         if self.current_player == self.black_player:
             player = np.zeros(GRID_SHAPE)
         else:
@@ -304,19 +307,11 @@ class TaflEnv(gym.Env):
         if start == end:
             return False
         elif start // COLS == end // COLS:
-            if end < start:
-                # Left
-                step = 1
-            else:
-                # Right
-                step = -1 
+            # Left / Right
+            step = 1 if end < start else -1
         else:
-            if end < start:
-                # Top
-                step = COLS
-            else:
-                # Bottom
-                step = -COLS
+            # Top / Bottom
+            step = COLS if end < start else -COLS
         for x in range(end, start, step):
             if self.board[x] is not None:
                 return False
@@ -354,10 +349,7 @@ class TaflEnv(gym.Env):
 
     def is_king_captured(self, board, last_board):
         if RULE_HARD_KING_CAPTURE:
-            if self.king.position in SIDE_SQUARES:
-                return False
-            if self.is_king_hard_captured(board):
-                return True
+            return self.is_king_hard_captured(board)
         else:
             if self.king.position == CENTER_SQUARE:
                 return self.is_king_hard_captured(board)
@@ -378,13 +370,14 @@ class TaflEnv(gym.Env):
                 return False
 
     def is_king_hard_captured(self, board):
+        if self.king.position in SIDE_SQUARES:
+            return False
         neighbours = self.get_neighbour_positions(self.king.position)
         for direction in neighbours:
             pos = neighbours[direction]
             if not self.is_square_hostile(board, pos, self.white_player):
                 return False
         return True
-
 
     def is_white_surrounded(self, board):
         white_tokens = self.white_player.tokens.copy()
