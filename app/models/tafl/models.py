@@ -60,13 +60,11 @@ class CustomCNN(BaseFeaturesExtractor):
         self.relu = nn.ReLU()
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        # TODO: implement correct merging of split input observation
-        '''a = self.conv1(observations)
+        a = self.conv1(observations)
         b = self.conv2(observations)
-        print(a.shape, b.shape)
-        y = th.cat((a, b), -1)'''
-
-        y = self.conv(observations)
+        y = th.cat((a, b), 1)
+        #y = self.conv(observations)
+        
         # Residual Layer with skip connection
         for i in range(RESIDUAL_LAYERS):
             x = y
